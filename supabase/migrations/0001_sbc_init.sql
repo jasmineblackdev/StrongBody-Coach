@@ -1,4 +1,4 @@
--- ─────────────────────────────────────────────────────────────────────────────
+--
 -- StrongBody Coach — initial migration (ISOLATED)
 --
 -- Every object in this file is prefixed with `sbc_`. This migration NEVER
@@ -7,11 +7,11 @@
 -- Safe to run multiple times:
 --   - all CREATE statements are guarded with IF NOT EXISTS or DO blocks
 --   - all policies are dropped + recreated (idempotent)
--- ─────────────────────────────────────────────────────────────────────────────
+--
 
 create extension if not exists "pgcrypto";
 
--- ─── Enums ───────────────────────────────────────────────────────────────────
+-- Enums
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'sbc_sex') then
@@ -31,7 +31,7 @@ begin
   end if;
 end$$;
 
--- ─── Helper trigger fn (prefixed) ────────────────────────────────────────────
+-- Helper trigger fn (prefixed)
 create or replace function public.sbc_set_updated_at()
 returns trigger
 language plpgsql
@@ -42,7 +42,7 @@ begin
 end;
 $$;
 
--- ─── Profiles ────────────────────────────────────────────────────────────────
+-- Profiles
 create table if not exists public.sbc_profiles (
   user_id              uuid primary key references auth.users(id) on delete cascade,
   name                 text not null,
@@ -72,7 +72,7 @@ create trigger sbc_profiles_set_updated_at
   before update on public.sbc_profiles
   for each row execute function public.sbc_set_updated_at();
 
--- ─── Weekly plans ────────────────────────────────────────────────────────────
+-- Weekly plans
 create table if not exists public.sbc_weekly_plans (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references auth.users(id) on delete cascade,
@@ -91,7 +91,7 @@ create trigger sbc_weekly_plans_set_updated_at
   before update on public.sbc_weekly_plans
   for each row execute function public.sbc_set_updated_at();
 
--- ─── Workout logs ────────────────────────────────────────────────────────────
+-- Workout logs
 create table if not exists public.sbc_workout_logs (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid not null references auth.users(id) on delete cascade,
@@ -112,7 +112,7 @@ create index if not exists sbc_workout_logs_user_date_idx
 create index if not exists sbc_workout_logs_user_week_idx
   on public.sbc_workout_logs(user_id, week_number);
 
--- ─── Body metrics ────────────────────────────────────────────────────────────
+-- Body metrics
 create table if not exists public.sbc_body_metrics (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null references auth.users(id) on delete cascade,
@@ -125,7 +125,7 @@ create table if not exists public.sbc_body_metrics (
 create index if not exists sbc_body_metrics_user_date_idx
   on public.sbc_body_metrics(user_id, metric_date desc);
 
--- ─── Meal plans (cached) ─────────────────────────────────────────────────────
+-- Meal plans (cached)
 create table if not exists public.sbc_meal_plans (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid not null references auth.users(id) on delete cascade,
@@ -140,7 +140,7 @@ create table if not exists public.sbc_meal_plans (
 create index if not exists sbc_meal_plans_user_date_idx
   on public.sbc_meal_plans(user_id, plan_date desc);
 
--- ─── RLS ─────────────────────────────────────────────────────────────────────
+-- RLS
 alter table public.sbc_profiles      enable row level security;
 alter table public.sbc_weekly_plans  enable row level security;
 alter table public.sbc_workout_logs  enable row level security;
@@ -217,9 +217,9 @@ create policy sbc_meal_plans_update on public.sbc_meal_plans
 create policy sbc_meal_plans_delete on public.sbc_meal_plans
   for delete to authenticated using (auth.uid() = user_id);
 
--- ─── Storage: private bucket for progress photos ─────────────────────────────
--- Files must be stored under a folder named with the user's UUID so RLS works,
--- e.g. uploads(`${auth.uid()}/2026-05-02-front.jpg`, ...)
+-- Storage: private bucket for progress photos
+-- Files must live under a folder named with the user's UUID for RLS.
+-- Example object key: '<auth_uid>/2026-05-02-front.jpg'
 insert into storage.buckets (id, name, public)
 values ('sbc_progress_photos', 'sbc_progress_photos', false)
 on conflict (id) do nothing;
@@ -249,4 +249,4 @@ create policy sbc_storage_delete on storage.objects
   using (bucket_id = 'sbc_progress_photos'
          and (storage.foldername(name))[1] = auth.uid()::text);
 
--- ─── End of migration ────────────────────────────────────────────────────────
+-- End of migration
