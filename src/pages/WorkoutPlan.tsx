@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { RefreshCw, ChevronRight } from 'lucide-react';
+import { RefreshCw, ChevronRight, X, Sparkles } from 'lucide-react';
 import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
+import ProposalReview from '../components/ProposalReview';
 import { store } from '../lib/storage';
+import { applyChanges, generateProposal } from '../lib/applyAdjustments';
 import { buildWeeklyPlan, dayLabel } from '../lib/workoutPlan';
-import type { TrainingPhase, WorkoutSession } from '../types';
+import type { PlanProposal, TrainingPhase, WorkoutSession } from '../types';
 
 const PHASES: TrainingPhase[] = ['hypertrophy', 'strength', 'peak', 'deload'];
 
@@ -11,12 +13,97 @@ export default function WorkoutPlanPage() {
   const profile = store.getProfile()!;
   const [weekNumber, setWeekNumber] = useState(store.getWeekNumber());
   const [phase, setPhase] = useState<TrainingPhase>(store.getPlan()?.phase ?? 'hypertrophy');
-  const plan = useMemo(() => buildWeeklyPlan(profile, weekNumber, phase), [profile, weekNumber, phase]);
+  const [planVersion, setPlanVersion] = useState(0);
+  const plan = useMemo(() => {
+    const stored = store.getPlan();
+    if (stored && stored.weekNumber === weekNumber && stored.phase === phase) {
+      return stored;
+    }
+    return buildWeeklyPlan(profile, weekNumber, phase);
+    // planVersion bumps force re-read after accept
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, weekNumber, phase, planVersion]);
   const [openId, setOpenId] = useState<string | null>(plan.sessions[0]?.id ?? null);
+  const [proposal, setProposal] = useState<PlanProposal | null>(() => {
+    const p = store.getProposal();
+    if (!p) return null;
+    // Stale guard: drop proposals built from a different week than current
+    const current = store.getPlan();
+    if (current && p.fromWeek !== current.weekNumber) {
+      store.clearProposal();
+      return null;
+    }
+    return p;
+  });
 
   function persistAndContinue() {
     store.setPlan(plan);
     store.setWeekNumber(weekNumber);
+  }
+
+  const [summary, setSummary] = useState<{ accepted: number; rejected: number } | null>(null);
+  const [previewMessage, setPreviewMessage] = useState<string | null>(null);
+
+  function generateCoachPreview() {
+    setSummary(null);
+
+    const currentPlan = store.getPlan();
+    if (!currentPlan) {
+      setPreviewMessage('Save the plan first, then log a workout to get a preview.');
+      return;
+    }
+
+    const recentLogs = store
+      .getLogs()
+      .filter((l) => l.weekNumber === currentPlan.weekNumber);
+
+    if (!recentLogs.length) {
+      setPreviewMessage(
+        `No logs yet for week ${currentPlan.weekNumber} — log a workout first.`,
+      );
+      return;
+    }
+
+    const next = generateProposal({ currentPlan, profile, recentLogs });
+    if (!next) {
+      // Engine ran but had no actionable changes — clear any stale proposal too.
+      store.clearProposal();
+      setProposal(null);
+      setPreviewMessage('No changes needed right now.');
+      return;
+    }
+
+    store.setProposal(next);
+    setProposal(next);
+    setPreviewMessage(null);
+  }
+
+  function handleProposalComplete({
+    acceptedChanges,
+    rejectedChanges,
+  }: {
+    acceptedChanges: PlanProposal['changes'];
+    rejectedChanges: PlanProposal['changes'];
+  }) {
+    if (!proposal) return;
+
+    if (acceptedChanges.length > 0) {
+      const newPlan = applyChanges({
+        fromPlan: proposal.fromPlan,
+        profile,
+        toWeek: proposal.toWeek,
+        changes: acceptedChanges,
+      });
+      store.setPlan(newPlan);
+      store.setWeekNumber(proposal.toWeek);
+      setWeekNumber(proposal.toWeek);
+      setPhase(newPlan.phase);
+      setPlanVersion((v) => v + 1);
+    }
+
+    store.clearProposal();
+    setProposal(null);
+    setSummary({ accepted: acceptedChanges.length, rejected: rejectedChanges.length });
   }
 
   return (
@@ -31,11 +118,31 @@ export default function WorkoutPlanPage() {
         <div className="flex flex-wrap gap-2">
           <Pill tone="accent">Week {weekNumber}</Pill>
           <Pill>Phase: {phase}</Pill>
+          <button onClick={generateCoachPreview} className="btn-outline">
+            <Sparkles size={16} /> Generate coach preview
+          </button>
           <button onClick={persistAndContinue} className="btn-primary">
             <RefreshCw size={16} /> Save plan
           </button>
         </div>
       </header>
+
+      {previewMessage && !proposal && (
+        <div className="rounded-2xl border border-ink-700 bg-ink-850 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm text-zinc-200">
+              <Sparkles size={14} className="mr-1.5 inline-block text-rose-glow" />
+              {previewMessage}
+            </div>
+            <button
+              onClick={() => setPreviewMessage(null)}
+              className="inline-flex items-center gap-1 rounded-lg border border-ink-700 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-ink-800"
+            >
+              <X size={12} /> Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       <Card>
         <div className="flex flex-wrap items-center gap-3">
@@ -63,6 +170,31 @@ export default function WorkoutPlanPage() {
           </div>
         </div>
       </Card>
+
+      {proposal && (
+        <ProposalReview proposal={proposal} onComplete={handleProposalComplete} />
+      )}
+
+      {summary && (
+        <div className="rounded-2xl border border-success/30 bg-success/10 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-sm text-zinc-100">
+              <span className="font-semibold text-white">Review complete.</span>{' '}
+              Accepted {summary.accepted} change{summary.accepted === 1 ? '' : 's'}, rejected{' '}
+              {summary.rejected} change{summary.rejected === 1 ? '' : 's'}.
+              {summary.accepted > 0
+                ? ` Your local plan is now Week ${store.getWeekNumber()}.`
+                : ' No changes applied — staying on the current plan.'}
+            </div>
+            <button
+              onClick={() => setSummary(null)}
+              className="inline-flex items-center gap-1 rounded-lg border border-ink-700 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-ink-800"
+            >
+              <X size={12} /> Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       <CoachMessage>
         {phase === 'deload'

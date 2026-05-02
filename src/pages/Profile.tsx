@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Save } from 'lucide-react';
 import { Card, CoachMessage, SectionHeader, Pill } from '../components/ui';
 import CloudPanel from '../components/CloudPanel';
+import TestDataPanel from '../components/TestDataPanel';
+import OneRMSuggestionPanel from '../components/OneRMSuggestionPanel';
 import { store } from '../lib/storage';
 import { buildWeeklyPlan } from '../lib/workoutPlan';
 import type { CardioPref, Goal, Profile, ProblemArea } from '../types';
@@ -66,6 +68,10 @@ export default function ProfilePage() {
       </CoachMessage>
 
       <CloudPanel />
+
+      <TestDataPanel />
+
+      <OneRMSuggestionPanel />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

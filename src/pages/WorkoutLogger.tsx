@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Save, Plus, Trash2 } from 'lucide-react';
+import { Save, Plus, Trash2, ClipboardCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
 import { store } from '../lib/storage';
 import { dayLabel } from '../lib/workoutPlan';
 import { decisionsForLog } from '../lib/autoAdjust';
+import { generateProposal } from '../lib/applyAdjustments';
 import type {
   ExerciseLog,
   ProblemArea,
@@ -48,6 +50,7 @@ export default function WorkoutLoggerPage() {
   const [soreness, setSoreness] = useState<ProblemArea[]>([]);
   const [notes, setNotes] = useState('');
   const [savedLog, setSavedLog] = useState<WorkoutLog | null>(null);
+  const [proposalChangeCount, setProposalChangeCount] = useState<number | null>(null);
 
   function changeSession(id: string) {
     setSessionId(id);
@@ -99,6 +102,24 @@ export default function WorkoutLoggerPage() {
     };
     store.addLog(log);
     setSavedLog(log);
+
+    // Auto-generate next-week proposal from logs in this plan's week.
+    // Saved to localStorage; only applied when the user accepts on the Workout Plan page.
+    const sameWeekLogs = store
+      .getLogs()
+      .filter((l) => l.weekNumber === plan.weekNumber);
+    const proposal = generateProposal({
+      currentPlan: plan,
+      profile,
+      recentLogs: sameWeekLogs,
+    });
+    if (proposal) {
+      store.setProposal(proposal);
+      setProposalChangeCount(proposal.changes.length);
+    } else {
+      store.clearProposal();
+      setProposalChangeCount(0);
+    }
   }
 
   const decisions = savedLog ? decisionsForLog(savedLog, session.prescriptions) : [];
@@ -286,6 +307,31 @@ export default function WorkoutLoggerPage() {
           </button>
         </div>
       </Card>
+
+      {savedLog && proposalChangeCount !== null && (
+        <CoachMessage
+          tone={proposalChangeCount > 0 ? 'accent' : 'success'}
+          title={
+            proposalChangeCount > 0
+              ? `Next week's plan: ${proposalChangeCount} proposed change${proposalChangeCount === 1 ? '' : 's'}`
+              : 'Nothing to change for next week'
+          }
+          icon={<ClipboardCheck size={18} />}
+        >
+          {proposalChangeCount > 0 ? (
+            <>
+              The coach drafted next week's plan based on this session.{' '}
+              <Link to="/plan" className="underline font-semibold text-white">
+                Review on Workout Plan →
+              </Link>{' '}
+              You can accept or reject before anything changes. Nothing is pushed to the cloud
+              until you click Push.
+            </>
+          ) : (
+            "You're on track. Repeat the prescription as written next week."
+          )}
+        </CoachMessage>
+      )}
 
       {savedLog && (
         <Card>

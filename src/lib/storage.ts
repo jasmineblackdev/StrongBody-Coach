@@ -1,5 +1,6 @@
 import type {
   BodyMetric,
+  PlanProposal,
   Profile,
   WorkoutLog,
   WeeklyPlan,
@@ -11,6 +12,7 @@ const KEYS = {
   metrics: 'sbc:bodyMetrics',
   plan: 'sbc:weeklyPlan',
   weekNumber: 'sbc:weekNumber',
+  proposal: 'sbc:planProposal',
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -51,6 +53,22 @@ export const store = {
 
   getWeekNumber: (): number => read<number>(KEYS.weekNumber, 1),
   setWeekNumber: (n: number) => write(KEYS.weekNumber, n),
+
+  getProposal: (): PlanProposal | null => {
+    const p = read<PlanProposal | null>(KEYS.proposal, null);
+    if (!p) return null;
+    // Drop proposals from older app versions that lack the ops model
+    const valid =
+      Array.isArray(p.changes) &&
+      p.changes.every((c) => typeof c.id === 'string' && Array.isArray(c.ops));
+    if (!valid) {
+      localStorage.removeItem(KEYS.proposal);
+      return null;
+    }
+    return p;
+  },
+  setProposal: (p: PlanProposal) => write(KEYS.proposal, p),
+  clearProposal: () => localStorage.removeItem(KEYS.proposal),
 
   reset: () => Object.values(KEYS).forEach((k) => localStorage.removeItem(k)),
 };

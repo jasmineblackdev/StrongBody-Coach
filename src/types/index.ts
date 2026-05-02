@@ -145,3 +145,47 @@ export interface WeakPoint {
   evidence: string;
   recommendation: string;
 }
+
+export type PlanChangeKind =
+  | 'load_increase'
+  | 'load_decrease'
+  | 'volume_decrease'
+  | 'add_exercise'
+  | 'swap_exercise'
+  | 'phase_change';
+
+export type PlanOp =
+  | { kind: 'load_set'; day: WorkoutDay; exercise: string; loadLbs: number }
+  | { kind: 'sets_set'; day: WorkoutDay; exercise: string; sets: number }
+  | { kind: 'add_exercise'; day: WorkoutDay; prescription: ExercisePrescription }
+  | {
+      kind: 'swap_exercise';
+      day: WorkoutDay;
+      fromName: string;
+      to: ExercisePrescription;
+    }
+  | { kind: 'phase_change'; phase: TrainingPhase };
+
+export interface PlanChange {
+  id: string;
+  day: WorkoutDay | 'all';
+  exercise: string;
+  kind: PlanChangeKind;
+  before?: string;
+  after?: string;
+  reason: string;
+  /** Ops to apply to fromPlan when this change is accepted. */
+  ops: PlanOp[];
+}
+
+export interface PlanProposal {
+  fromWeek: number;
+  toWeek: number;
+  fromPhase: TrainingPhase;
+  toPhase: TrainingPhase;
+  fromPlan: WeeklyPlan;
+  changes: PlanChange[];
+  generatedAt: string;
+  // ids of source workout logs used to build the proposal — for staleness check
+  sourceLogIds: string[];
+}

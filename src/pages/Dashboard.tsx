@@ -88,6 +88,19 @@ export default function Dashboard() {
           : 'Strong week so far. Keep RPE honest, hit your protein, and walk after dinner — Wegovy + walks is the cheat code for bloat.'}
       </CoachMessage>
 
+      {(() => {
+        const pending = store.getProposal();
+        if (!pending) return null;
+        return (
+          <CoachMessage tone="accent" title={`Next week proposal: ${pending.changes.length} changes ready`}>
+            Coach drafted Week {pending.toWeek} based on your last sessions.{' '}
+            <Link to="/plan" className="underline font-semibold text-white">
+              Review on Workout Plan →
+            </Link>
+          </CoachMessage>
+        );
+      })()}
+
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
