@@ -394,22 +394,22 @@ export interface ComposeArgs {
 export function composeMeals(args: ComposeArgs): MealItem[] {
   const { profile, isTrainingDay, targets, daySeed, mealCount } = args;
 
-  const allowed = INGREDIENTS.filter((f) => passesSensitivities(f, profile));
-  const dayContext: FoodTag = isTrainingDay ? 'training-friendly' : 'rest-friendly';
+  // Sensitivity filter is the only hard exclusion. The slot tags
+  // (breakfast-ok / lunch-ok / pre-workout-ok / etc.) already provide enough
+  // contextual constraint, and macro shaping handles the training-vs-rest
+  // calorie/carb difference. Without this, staples like rice and sweet
+  // potato would get incorrectly dropped on rest days because they're
+  // tagged "training-friendly".
+  const pool = INGREDIENTS.filter((f) => passesSensitivities(f, profile));
 
-  // Filter for context: low-bloat always preferred, day-context softly preferred.
-  // Don't strictly require the tag — many ingredients fit both contexts.
-  const pool = allowed.filter((f) => {
-    // Soft filter: include if it has the day tag OR no day tag at all
-    const hasOpposite = f.tags.includes(isTrainingDay ? 'rest-friendly' : 'training-friendly');
-    const hasDay = f.tags.includes(dayContext);
-    if (hasOpposite && !hasDay) return false;
-    return true;
-  });
-
-  // Time-aware slot inference — uses profile.mealTimes + workoutTime when
-  // available, falls back to a default pattern by mealCount otherwise.
-  const slots: Slot[] = inferSlots(profile.mealTimes, profile.workoutTime, mealCount);
+  // Time-aware slot inference. On rest days we deliberately drop workoutTime
+  // so the composer doesn't classify any meal as pre/post-workout — carbs
+  // get spread evenly across breakfast / mid_morning / lunch / snack / dinner.
+  const slots: Slot[] = inferSlots(
+    profile.mealTimes,
+    isTrainingDay ? profile.workoutTime : undefined,
+    mealCount,
+  );
 
   // Per-macro shape totals for normalization. Each slot's share of a given
   // macro is its shape weight divided by the sum across all selected slots.

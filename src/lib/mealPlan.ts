@@ -199,7 +199,7 @@ export function buildDailyPlan(ctx: PlanContext): DailyMealPlan {
 
   const baseNote = isTrainingDay
     ? 'Training day. Push 30–45g carbs in the meal before your lift and 40–50g after — that is your performance and recovery food.'
-    : 'Rest day. Lower carbs, hold protein, prioritize veggies and whole foods. Walk after meals to ease bloating.';
+    : 'Rest day — carbs spread evenly to support recovery and appetite control. Hold protein high, walk after meals.';
   const coachNote = [baseNote, ...targets.notes].join(' ');
 
   return {
