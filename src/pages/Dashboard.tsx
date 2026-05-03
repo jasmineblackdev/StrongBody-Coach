@@ -8,6 +8,7 @@ import { computeReadiness, READINESS_TONE, SUGGESTION_COPY } from '../lib/recove
 import { estimateAllLifts, TREND_LABEL, type StrengthTrend } from '../lib/strengthEngine';
 import { computeWeightTrend } from '../lib/weightTrendEngine';
 import { analyzeFatLoss, recommendationTone } from '../lib/fatLossEngine';
+import { analyzeAdherenceAndPlateau, plateauTone } from '../lib/adherenceEngine';
 import { computeProteinTargetG } from '../lib/macroEngine';
 import { generateCoachSummary } from '../lib/ai/coachSummary';
 import { forecastWeight } from '../lib/ml/weightForecaster';
@@ -92,6 +93,17 @@ export default function Dashboard() {
   const weightForecast = useMemo(() => forecastWeight(metrics), [metrics]);
   const liftForecasts = useMemo(() => forecastAllLifts(logs), [logs]);
   const injuryRisk = useMemo(() => assessInjuryRisk(logs), [logs]);
+  const plateau = useMemo(
+    () =>
+      weightTrend
+        ? analyzeAdherenceAndPlateau({
+            weightTrend,
+            lastCheckIn: store.getCheckIns()[0],
+            recentLogs: logs,
+          })
+        : null,
+    [weightTrend, logs],
+  );
 
   if (!profile || !plan || !weightTrend || !fatLoss || !coachSummary) return null;
 
@@ -214,6 +226,59 @@ export default function Dashboard() {
           </div>
         )}
       </CoachMessage>
+
+      {/* Adherence + plateau card — answers "why isn't this working?" */}
+      {plateau && (
+        <Card className="border-accent/20">
+          <SectionHeader
+            title={
+              plateau.primaryAction === 'stay_course'
+                ? 'Plateau check: clear'
+                : plateau.primaryAction === 'increase_calories'
+                ? 'You\'re losing too fast'
+                : plateau.primaryAction === 'log_more_data'
+                ? 'Why you can\'t tell yet'
+                : "Why you're not losing weight"
+            }
+            subtitle="Adherence + plateau diagnostic"
+            action={
+              <Pill tone={plateauTone(plateau.primaryAction)}>
+                {plateau.confidence} confidence
+              </Pill>
+            }
+          />
+          <CoachMessage tone={plateauTone(plateau.primaryAction)} title={plateau.headline}>
+            {plateau.reason}
+          </CoachMessage>
+          {plateau.adherence.hasCheckIn && (
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500">Calories</div>
+                <div className="mt-1 font-display text-lg font-semibold">
+                  {Math.round(plateau.adherence.components.calories * 100)}%
+                </div>
+              </div>
+              <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500">Protein</div>
+                <div className="mt-1 font-display text-lg font-semibold">
+                  {Math.round(plateau.adherence.components.protein * 100)}%
+                </div>
+              </div>
+              <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500">Workouts</div>
+                <div className="mt-1 font-display text-lg font-semibold">
+                  {Math.round(plateau.adherence.components.workouts * 100)}%
+                </div>
+              </div>
+            </div>
+          )}
+          {!plateau.adherence.hasCheckIn && (
+            <div className="mt-3 text-xs text-zinc-500">
+              No recent check-in. <Link to="/check-in" className="text-rose-glow hover:underline">Run one</Link> to feed adherence into this diagnostic.
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Predictions card — ML-lite forecasts */}
       <Card>

@@ -11,6 +11,7 @@ import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import { analyzeFatLoss, recommendationTone } from '../lib/fatLossEngine';
+import { analyzeAdherenceAndPlateau, plateauTone } from '../lib/adherenceEngine';
 import { computeWeightTrend } from '../lib/weightTrendEngine';
 import type { AdherenceLevel, WeeklyCheckIn } from '../types';
 
@@ -79,6 +80,17 @@ export default function CheckInPage() {
     [profile, metrics, logs, checkIns, submitted],
   );
 
+  // Adherence + plateau diagnostic — answers "why isn't this working?"
+  const plateau = useMemo(
+    () =>
+      analyzeAdherenceAndPlateau({
+        weightTrend,
+        lastCheckIn: submitted ?? checkIns[0],
+        recentLogs: logs,
+      }),
+    [weightTrend, submitted, checkIns, logs],
+  );
+
   if (submitted) {
     const tone = recommendationTone(analysis.primary.kind);
     return (
@@ -89,6 +101,47 @@ export default function CheckInPage() {
             Logged {submitted.date.slice(0, 10)} · the engine ran a fresh analysis below.
           </p>
         </header>
+
+        <Card className="border-accent/20">
+          <SectionHeader
+            title={
+              plateau.primaryAction === 'stay_course'
+                ? 'Plateau check: clear'
+                : plateau.primaryAction === 'increase_calories'
+                ? "You're losing too fast"
+                : plateau.primaryAction === 'log_more_data'
+                ? "Why you can't tell yet"
+                : "Why you're not losing weight"
+            }
+            subtitle="Adherence + plateau diagnostic"
+            action={<Pill tone={plateauTone(plateau.primaryAction)}>{plateau.confidence} confidence</Pill>}
+          />
+          <CoachMessage tone={plateauTone(plateau.primaryAction)} title={plateau.headline}>
+            {plateau.reason}
+          </CoachMessage>
+          {plateau.adherence.hasCheckIn && (
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500">Calories</div>
+                <div className="mt-1 font-display text-lg font-semibold">
+                  {Math.round(plateau.adherence.components.calories * 100)}%
+                </div>
+              </div>
+              <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500">Protein</div>
+                <div className="mt-1 font-display text-lg font-semibold">
+                  {Math.round(plateau.adherence.components.protein * 100)}%
+                </div>
+              </div>
+              <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                <div className="text-[10px] uppercase tracking-wider text-zinc-500">Workouts</div>
+                <div className="mt-1 font-display text-lg font-semibold">
+                  {Math.round(plateau.adherence.components.workouts * 100)}%
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
 
         <Card>
           <SectionHeader
