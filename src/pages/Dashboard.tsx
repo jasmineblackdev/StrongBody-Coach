@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Dumbbell, Trophy, HeartPulse, Salad, Target, TrendingUp, TrendingDown, Minus, HelpCircle, Sparkles } from 'lucide-react';
+import { Flame, Dumbbell, Trophy, HeartPulse, Salad, Target, TrendingUp, TrendingDown, Minus, HelpCircle, Sparkles, BellRing } from 'lucide-react';
 import { Card, CoachMessage, ProgressBar, SectionHeader, StatCard, Pill } from '../components/ui';
 import { BodyWeightChart, MacroDoughnut } from '../components/charts';
 import { useStoreVersion } from '../hooks/useStore';
@@ -140,8 +140,45 @@ export default function Dashboard() {
     recentLogs: logs,
   });
 
+  // Auto-Coach weekly nudge: when the toggle is on AND the last check-in is
+  // 7+ days old (or none exists), show the banner. No external scheduling
+  // required — this is a pure read of local state on every Dashboard render.
+  const checkIns = store.getCheckIns();
+  const lastCheckInDate = checkIns[0]?.date;
+  const daysSinceLastCheckIn = lastCheckInDate
+    ? Math.floor((Date.now() - new Date(lastCheckInDate).getTime()) / 86400000)
+    : null;
+  const coachNudgeDue =
+    profile.autoCoach === true &&
+    (daysSinceLastCheckIn === null || daysSinceLastCheckIn >= 7);
+
   return (
     <div className="space-y-6">
+      {coachNudgeDue && (
+        <div className="rounded-2xl border-2 border-accent/40 bg-accent/10 p-4 shadow-glow">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/25 text-rose-glow">
+                <BellRing size={18} />
+              </span>
+              <div>
+                <div className="font-display text-base font-semibold text-zinc-100">
+                  Time for your weekly coach review
+                </div>
+                <div className="mt-0.5 text-xs text-zinc-300">
+                  {daysSinceLastCheckIn === null
+                    ? 'Auto-Coach is on. Run your first check-in to start drafting weekly decisions.'
+                    : `It's been ${daysSinceLastCheckIn} days since your last check-in. Run a fresh one and the engine will draft this week's decision.`}
+                </div>
+              </div>
+            </div>
+            <Link to="/check-in" className="btn-primary">
+              <Sparkles size={14} /> Start check-in
+            </Link>
+          </div>
+        </div>
+      )}
+
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="h1">Hey, {profile.name}.</h1>
