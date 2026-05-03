@@ -553,6 +553,154 @@ const LIBRARY: ExerciseEntry[] = [
     ],
     difficultyLevel: 'intermediate',
   },
+
+  // ─── Stability ball variants ────────────────────────────────────────────
+  // The user has a flat-top stability ball. These four entries cover the
+  // typical home-core repertoire and serve as lower-back-safe alternates
+  // when pain is flagged.
+
+  {
+    name: 'Stability Ball Plank',
+    aliases: ['Swiss Ball Plank', 'Ball Plank'],
+    primaryMuscles: ['Core', 'Trunk stabilizers'],
+    secondaryMuscles: ['Shoulders', 'Glutes'],
+    feel:
+      "Deep core working hard to keep the ball still. The instability forces the trunk to brace 360° — abs, obliques, and low-back stabilizers all firing together.",
+    avoidFeel:
+      "Lower-back compression or pinching. Hips sagging toward the ground means the core has tapped out — drop it before form breaks down.",
+    setupCues: [
+      'Forearms on the ball, elbows under shoulders.',
+      "Feet hip-width on the floor, body in one straight line.",
+      "Squeeze glutes hard before you start the timer — they hold the pelvis level.",
+      'Keep the ball steady. Any wobble is core inefficiency, not effort.',
+    ],
+    formSteps: [
+      'Hold the line: head → ribs → hips → heels.',
+      'Brace 360° — imagine someone about to push you sideways.',
+      'Breathe in shallow nasal breaths through the diaphragm; never hold air longer than 5 seconds.',
+      'When the ball starts moving more than your control allows, end the set — quality > duration.',
+    ],
+    commonMistakes: [
+      'Hips sag toward the ground.',
+      'Hips pike up (tent shape).',
+      'Holding breath the entire set.',
+      "Ball wobbles wildly — too unstable a starting point.",
+    ],
+    corrections: [
+      "Squeeze glutes harder. Cue: \"tuck the tailbone toward the rib cage by 10°.\"",
+      "Drop the hips back to neutral. Cue: \"long line from head to heels.\"",
+      'Inhale through the nose for 2s, exhale gently for 2s. Bracing ≠ holding breath.',
+      'Move the ball closer to a wall or bench so the hands can stabilize. Build to free-form over 4 weeks.',
+    ],
+    difficultyLevel: 'intermediate',
+  },
+
+  {
+    name: 'Stability Ball Crunch',
+    aliases: ['Swiss Ball Crunch', 'Ball Crunch'],
+    primaryMuscles: ['Rectus abdominis'],
+    secondaryMuscles: ['Obliques', 'Hip flexors'],
+    feel:
+      'Full upper-ab contraction with the lower back fully supported by the ball. The extra range of motion (compared to a floor crunch) hits the abs through their entire shortening pattern.',
+    avoidFeel:
+      "Neck strain or any low-back pinching. If the ball rolls forward as you crunch, you're using hip flexors instead of abs — reset.",
+    setupCues: [
+      "Sit on the ball, then walk feet forward until shoulder blades and lower back are supported on the ball.",
+      'Feet flat, knees at 90°, slightly wider than hips for a stable base.',
+      'Hands light at the temples; do NOT pull on the neck.',
+      "Eyes up at the ceiling — keeps the cervical spine neutral.",
+    ],
+    formSteps: [
+      'Drop the upper back over the ball to get a slight stretch through the abs.',
+      'Exhale and crunch up by shortening the abs — chest toward pelvis.',
+      "Pause 1s at the top with abs squeezed.",
+      'Lower under control through the full range. No bouncing off the ball.',
+    ],
+    commonMistakes: [
+      'Pulling on the neck.',
+      "Limited range — only crunching halfway up.",
+      'Ball rolling forward each rep.',
+      'Holding breath at the top.',
+    ],
+    corrections: [
+      "Hands hover at temples, fingertips barely touching. Cue: \"chin off chest, eyes at the ceiling.\"",
+      "Drop into a slight extension at the bottom — let the abs stretch. Then crunch all the way up.",
+      "Anchor the feet harder. Imagine pushing them through the floor.",
+      "Exhale on the crunch up. \"Forced exhale\" actually helps the abs contract harder.",
+    ],
+    difficultyLevel: 'beginner',
+  },
+
+  {
+    name: 'Stability Ball Knee Tuck',
+    aliases: ['Swiss Ball Knee Tuck', 'Ball Pike Knee Tuck'],
+    primaryMuscles: ['Lower abs', 'Hip flexors'],
+    secondaryMuscles: ['Shoulders', 'Trunk stabilizers'],
+    feel:
+      'Lower abs hauling the legs in toward the chest. Shoulders work as anti-protraction stabilizers. The dynamic part is the abs; the plank position is the bracing.',
+    avoidFeel:
+      "Lower-back rounding or arching as the ball comes in. Shoulders rolling forward into the ball.",
+    setupCues: [
+      'Plank position with shins on the ball, hands directly under shoulders.',
+      'Body straight from head to feet.',
+      'Glutes squeezed, ribs down, neutral spine before the first rep.',
+    ],
+    formSteps: [
+      'Initiate by pulling the knees toward the chest using the lower abs — not the hip flexors alone.',
+      'The ball rolls forward as the knees tuck; back stays flat.',
+      "Pause 1s with knees fully tucked under the hips.",
+      'Reverse slowly — control the eccentric back to plank.',
+    ],
+    commonMistakes: [
+      'Hips piking too high.',
+      'Lower-back sag at the start position.',
+      'Using momentum — bouncing the ball in.',
+      'Shoulders rounding forward.',
+    ],
+    corrections: [
+      'Keep hips at the same height as shoulders during the tuck. Cue: "knees come to ribs, hips stay put."',
+      'Squeeze glutes harder before the rep. Brace 360° before initiating the tuck.',
+      "Slow the eccentric — 2s back to start. Momentum cheats the lower abs.",
+      'Push the floor away with straight arms. Cue: "long arms, proud chest."',
+    ],
+    difficultyLevel: 'intermediate',
+  },
+
+  {
+    name: 'Stability Ball Back Extension',
+    aliases: ['Swiss Ball Back Extension', 'Ball Hyperextension'],
+    primaryMuscles: ['Spinal erectors', 'Glutes'],
+    secondaryMuscles: ['Hamstrings', 'Lower back stabilizers'],
+    feel:
+      "Spinal erectors lengthening then contracting. Glutes finishing the rep. This is a low-load, high-control movement that builds spinal endurance — exactly what protects the low back during heavy squats and deadlifts.",
+    avoidFeel:
+      "Sharp pinching anywhere in the spine. Hyper-arching at the top. This should feel like a controlled stretch + contract, never a snap.",
+    setupCues: [
+      'Lay face-down on the ball with hips supported.',
+      'Feet anchored against a wall or under something heavy for stability.',
+      "Hands behind the head or arms extended (easier).",
+      'Start with a slight forward bend over the ball — let the back lengthen first.',
+    ],
+    formSteps: [
+      'Brace the core lightly — not max effort.',
+      'Lift the upper body by squeezing the glutes and lower-back muscles together.',
+      "Stop when the body is in a straight line; do NOT hyper-extend.",
+      'Lower under control to a slight rounded position. Pause 1s.',
+    ],
+    commonMistakes: [
+      'Hyper-extending at the top (overshooting straight line).',
+      'Using arm momentum.',
+      'Going too fast.',
+      "Holding breath through reps.",
+    ],
+    corrections: [
+      "Stop at neutral. Cue: \"shoulders, hips, ankles in a line — no further.\"",
+      'Hands stay behind the head or at chest. No throwing.',
+      "Tempo: 2s up, 1s pause, 2s down.",
+      "Exhale on the way up; inhale on the way down. Steady breathing keeps tension safe.",
+    ],
+    difficultyLevel: 'beginner',
+  },
 ];
 
 // ─── Coaching helpers ────────────────────────────────────────────────────────

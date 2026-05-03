@@ -194,9 +194,10 @@ const ALTERNATES: Record<ExerciseRole, { name: string; reason: string }[]> = {
     { name: 'Tricep Pushdown', reason: 'Isolation; lets the lockout fail without taxing pressing.' },
   ],
   core_brace: [
+    { name: 'Stability Ball Plank', reason: 'Lower-back-safe bracing. The ball forces 360° trunk control without spinal compression.' },
+    { name: 'Stability Ball Crunch', reason: 'Full ROM with back fully supported by the ball — gentler than floor crunches.' },
     { name: 'Pallof Press', reason: 'Anti-rotation — what your spine actually needs under load.' },
     { name: 'Dead Bug', reason: 'Anti-extension — re-grooves the lower-back position.' },
-    { name: 'Plank with Shoulder Tap', reason: 'Anti-rotation under fatigue.' },
   ],
   grip: [
     { name: 'Farmer Carry', reason: 'Loaded carry — full-body grip + posture work.' },

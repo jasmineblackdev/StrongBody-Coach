@@ -11,8 +11,15 @@ import { findExercise } from '../lib/exerciseLibrary';
 import { forecastAllLifts } from '../lib/ml/strengthForecaster';
 import { assessInjuryRisk, RISK_TONE } from '../lib/ml/injuryRisk';
 import { computeReadiness } from '../lib/recoveryEngine';
+import { defaultVolumeFor } from '../lib/workoutPlan';
 import GymModeToggle from '../components/GymModeToggle';
 import type { PlanProposal, TrainingPhase, WorkoutSession } from '../types';
+
+const VOLUME_LABEL = {
+  compact: { label: 'Compact volume', sub: '5–6 exercises/day' },
+  standard: { label: 'Standard volume', sub: '7–8 exercises/day' },
+  high: { label: 'High volume', sub: '8–9 exercises/day' },
+} as const;
 
 const PHASES: TrainingPhase[] = ['hypertrophy', 'strength', 'peak', 'deload'];
 
@@ -134,6 +141,19 @@ export default function WorkoutPlanPage() {
         <div className="flex flex-wrap gap-2">
           <Pill tone="accent">Week {weekNumber}</Pill>
           <Pill>Phase: {phase}</Pill>
+          {(() => {
+            const pref = defaultVolumeFor(profile);
+            const meta = VOLUME_LABEL[pref];
+            return (
+              <span
+                title="Core moves to cardio/rest days unless safety logic pulls it back in."
+                className="inline-flex flex-col items-start rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-rose-glow"
+              >
+                <span>{meta.label}</span>
+                <span className="text-[10px] font-normal text-zinc-300">{meta.sub}</span>
+              </span>
+            );
+          })()}
           {injuryRisk.level !== 'low' && (
             <Pill tone={RISK_TONE[injuryRisk.level]}>
               risk: {injuryRisk.level}
@@ -148,6 +168,10 @@ export default function WorkoutPlanPage() {
           <GymModeToggle />
         </div>
       </header>
+      <p className="-mt-3 text-[11px] text-zinc-500">
+        Core moves to cardio/rest days unless safety logic pulls it back in.
+        Adjust volume preference on Profile.
+      </p>
 
       {injuryRisk.level === 'high' && (
         <CoachMessage tone="danger" title={`Injury risk: ${injuryRisk.level}`}>

@@ -25,6 +25,7 @@ import { dayLabel } from '../lib/workoutPlan';
 import FinalCoachReview from '../components/FinalCoachReview';
 import DecisionHistoryPanel from '../components/DecisionHistoryPanel';
 import FatLossInsightCard from '../components/FatLossInsightCard';
+import FatLossTimelineCard from '../components/FatLossTimelineCard';
 import PhotoSignalCard from '../components/PhotoSignalCard';
 import type { WorkoutDay, WorkoutSession } from '../types';
 
@@ -234,16 +235,19 @@ export default function Dashboard() {
             {showCoreCircuit && (
               <div className="rounded-xl border border-accent/30 bg-accent/5 p-3">
                 <div className="text-[11px] uppercase tracking-wider text-rose-glow">
-                  Core circuit
+                  Core circuit (stability ball)
                 </div>
                 <div className="mt-1 text-sm font-semibold text-zinc-100">
                   3 rounds, 60s rest
                 </div>
                 <ul className="mt-0.5 space-y-0.5 text-xs text-zinc-300">
-                  <li>• Pallof Press · 10/side</li>
-                  <li>• Dead Bug · 8/side</li>
-                  <li>• Plank · 30s</li>
+                  <li>• Stability Ball Plank · 30s</li>
+                  <li>• Stability Ball Crunch · 12 reps</li>
+                  <li>• Stability Ball Knee Tuck · 8 reps</li>
                 </ul>
+                <div className="mt-1 text-[10px] text-zinc-500">
+                  Stability ball protects the low back vs floor variants.
+                </div>
               </div>
             )}
             <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
@@ -376,6 +380,10 @@ export default function Dashboard() {
           </div>
         </div>
       </Card>
+
+      {/* Fat Loss Timeline — hidden in Gym Mode like the other coaching
+          cards. Self-hides when goal !== fat_loss. */}
+      {!gymMode && <FatLossTimelineCard />}
 
       {/* Heavy AI / coaching cards — hidden entirely in Gym Mode so the
           mid-session view only shows what matters at the bar. */}
