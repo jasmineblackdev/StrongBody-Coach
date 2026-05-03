@@ -698,10 +698,45 @@ export function applyCoachDecision(decision: CoachDecision): void {
     // CoachDecisionCard's "what changes" section so the user can act.
   }
 
+  // Snapshot the body state at acceptance time so we can compare
+  // predicted vs actual after 7 days. Cheap and local-only.
+  const metrics = store.getMetrics();
+  const sortedDesc = [...metrics]
+    .filter((m) => typeof m.weightLbs === 'number')
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const cutoff = Date.now() - 7 * 86400000;
+  const recent7 = sortedDesc
+    .filter((m) => new Date(m.date).getTime() >= cutoff)
+    .map((m) => m.weightLbs as number);
+  const sevenDayAvg = recent7.length
+    ? +(recent7.reduce((s, n) => s + n, 0) / recent7.length).toFixed(1)
+    : null;
+
+  // Derive the trend at acceptance from prior-week vs this-week 7-day
+  // averages, when both windows have data.
+  const priorCutoff = Date.now() - 14 * 86400000;
+  const prior7 = sortedDesc
+    .filter((m) => {
+      const t = new Date(m.date).getTime();
+      return t >= priorCutoff && t < cutoff;
+    })
+    .map((m) => m.weightLbs as number);
+  const priorAvg = prior7.length
+    ? prior7.reduce((s, n) => s + n, 0) / prior7.length
+    : null;
+  const weeklyChangeAtAcceptance =
+    sevenDayAvg !== null && priorAvg !== null
+      ? +(sevenDayAvg - priorAvg).toFixed(2)
+      : null;
+
   store.setProfile(next);
   store.updateCoachDecision(decision.id, {
     status: 'accepted',
     acceptedAt: new Date().toISOString(),
+    appliedSnapshot: {
+      sevenDayAvgWeightLb: sevenDayAvg,
+      weeklyChangeAtAcceptance,
+    },
   });
 }
 

@@ -358,6 +358,30 @@ export interface SuggestedChange {
   };
 }
 
+export type DecisionOutcomeVerdict =
+  | 'worked'
+  | 'didnt_move'
+  | 'wrong_direction'
+  | 'not_enough_data';
+
+export interface CoachDecisionOutcome {
+  /** When the outcome was computed. */
+  measuredAt: string;
+  /** Days between acceptance and measurement. */
+  daysElapsed: number;
+  /** What the decision predicted (in lb/wk for fat-loss decisions; null otherwise). */
+  predictedWeeklyChange: number | null;
+  /** Actual smoothed weekly change in the days since acceptance. */
+  actualWeeklyChange: number | null;
+  /** Adherence the user maintained since the decision (0..1). */
+  adherenceScore: number | null;
+  workoutsCompleted: number;
+  workoutsPlanned: number;
+  verdict: DecisionOutcomeVerdict;
+  /** Plain-English read on whether the decision worked. */
+  note: string;
+}
+
 export interface CoachDecision {
   id: string;
   weekNumber: number;
@@ -381,4 +405,17 @@ export interface CoachDecision {
   rejectionReason?: string;
   acceptedAt?: string;
   rejectedAt?: string;
+  /**
+   * Snapshot of body state at acceptance time so we can compare predicted
+   * vs actual after 7 days. Recorded by applyCoachDecision.
+   */
+  appliedSnapshot?: {
+    sevenDayAvgWeightLb: number | null;
+    weeklyChangeAtAcceptance: number | null;
+  };
+  /**
+   * Outcome read computed once the decision is at least 7 days old.
+   * Drives the "Did this decision work?" view in DecisionHistoryPanel.
+   */
+  outcome?: CoachDecisionOutcome;
 }

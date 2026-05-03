@@ -22,7 +22,8 @@ import { store } from '../lib/storage';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { buildDailyPlan } from '../lib/mealPlan';
 import { dayLabel } from '../lib/workoutPlan';
-import CoachDecisionCard from '../components/CoachDecisionCard';
+import FinalCoachReview from '../components/FinalCoachReview';
+import DecisionHistoryPanel from '../components/DecisionHistoryPanel';
 import FatLossInsightCard from '../components/FatLossInsightCard';
 import PhotoSignalCard from '../components/PhotoSignalCard';
 import type { WorkoutDay, WorkoutSession } from '../types';
@@ -282,9 +283,14 @@ export default function Dashboard() {
           set logged. Single-line read with a link to the Progress page. */}
       <PhotoSignalCard />
 
-      {/* Coach Brain weekly decision — pending decisions surface here as
-          Accept / Reject. Hides itself when there is no decision yet. */}
-      <CoachDecisionCard mode="stored" />
+      {/* Final Coach Review — unified weekly card with What happened /
+          What's likely / What's holding back / Recommended action.
+          Hides itself when there is no pending decision. */}
+      <FinalCoachReview />
+
+      {/* Decision history with outcomes (predicted vs actual after 7d).
+          Hides when zero decisions have been logged. */}
+      <DecisionHistoryPanel />
 
       {/* Adherence + plateau card — answers "why isn't this working?" */}
       {plateau && (
