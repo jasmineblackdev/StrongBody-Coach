@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
-import { RefreshCw, ChevronRight, X, Sparkles } from 'lucide-react';
+import { RefreshCw, ChevronRight, X, Sparkles, Info } from 'lucide-react';
 import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
 import ProposalReview from '../components/ProposalReview';
+import ExerciseDetailsModal from '../components/ExerciseDetailsModal';
 import { store } from '../lib/storage';
 import { applyChanges, generateProposal } from '../lib/applyAdjustments';
 import { buildWeeklyPlan, dayLabel } from '../lib/workoutPlan';
+import { findExercise } from '../lib/exerciseLibrary';
 import type { PlanProposal, TrainingPhase, WorkoutSession } from '../types';
 
 const PHASES: TrainingPhase[] = ['hypertrophy', 'strength', 'peak', 'deload'];
@@ -24,6 +26,7 @@ export default function WorkoutPlanPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, weekNumber, phase, planVersion]);
   const [openId, setOpenId] = useState<string | null>(plan.sessions[0]?.id ?? null);
+  const [activeExercise, setActiveExercise] = useState<string | null>(null);
   const [proposal, setProposal] = useState<PlanProposal | null>(() => {
     const p = store.getProposal();
     if (!p) return null;
@@ -208,9 +211,22 @@ export default function WorkoutPlanPage() {
 
       <div className="space-y-3">
         {plan.sessions.map((s) => (
-          <SessionRow key={s.id} session={s} open={openId === s.id} onToggle={() => setOpenId(openId === s.id ? null : s.id)} />
+          <SessionRow
+            key={s.id}
+            session={s}
+            open={openId === s.id}
+            onToggle={() => setOpenId(openId === s.id ? null : s.id)}
+            onSelectExercise={setActiveExercise}
+          />
         ))}
       </div>
+
+      {activeExercise && (
+        <ExerciseDetailsModal
+          exerciseName={activeExercise}
+          onClose={() => setActiveExercise(null)}
+        />
+      )}
     </div>
   );
 }
@@ -219,10 +235,12 @@ function SessionRow({
   session,
   open,
   onToggle,
+  onSelectExercise,
 }: {
   session: WorkoutSession;
   open: boolean;
   onToggle: () => void;
+  onSelectExercise: (name: string) => void;
 }) {
   return (
     <div className="card overflow-hidden">
@@ -239,33 +257,44 @@ function SessionRow({
 
       {open && (
         <div className="mt-4 space-y-2">
-          {session.prescriptions.map((p, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-12 items-center gap-3 rounded-xl border border-ink-800 bg-ink-850 px-3 py-2.5 text-sm"
-            >
-              <div className="col-span-12 md:col-span-4">
-                <div className="font-semibold text-zinc-100">{p.name}</div>
-                {p.tags?.length ? (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {p.tags.slice(0, 3).map((t) => (
-                      <span key={t} className="text-[10px] uppercase tracking-wide text-zinc-500">
-                        #{t}
-                      </span>
-                    ))}
+          {session.prescriptions.map((p, i) => {
+            const hasDetails = Boolean(findExercise(p.name));
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onSelectExercise(p.name)}
+                className="grid w-full grid-cols-12 items-center gap-3 rounded-xl border border-ink-800 bg-ink-850 px-3 py-2.5 text-left text-sm transition hover:border-accent/40 hover:bg-ink-800"
+                title={hasDetails ? 'View exercise details' : 'Open details'}
+              >
+                <div className="col-span-12 md:col-span-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-zinc-100">{p.name}</span>
+                    {hasDetails && (
+                      <Info size={12} className="shrink-0 text-rose-glow opacity-80" />
+                    )}
                   </div>
-                ) : null}
-              </div>
-              <div className="col-span-3 md:col-span-2 text-zinc-300">
-                {p.sets} × {p.reps}
-              </div>
-              <div className="col-span-3 md:col-span-2 text-zinc-300">
-                {p.loadLbs ? `${p.loadLbs} lb` : '—'}
-              </div>
-              <div className="col-span-3 md:col-span-1 text-zinc-300">{p.restSec}s</div>
-              <div className="col-span-3 md:col-span-3 text-xs text-zinc-400">{p.notes}</div>
-            </div>
-          ))}
+                  {p.tags?.length ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {p.tags.slice(0, 3).map((t) => (
+                        <span key={t} className="text-[10px] uppercase tracking-wide text-zinc-500">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="col-span-3 md:col-span-2 text-zinc-300">
+                  {p.sets} × {p.reps}
+                </div>
+                <div className="col-span-3 md:col-span-2 text-zinc-300">
+                  {p.loadLbs ? `${p.loadLbs} lb` : '—'}
+                </div>
+                <div className="col-span-3 md:col-span-1 text-zinc-300">{p.restSec}s</div>
+                <div className="col-span-3 md:col-span-3 text-xs text-zinc-400">{p.notes}</div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
