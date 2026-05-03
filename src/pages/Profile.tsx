@@ -9,7 +9,15 @@ import ExportImportPanel from '../components/ExportImportPanel';
 import MacroBreakdownPanel from '../components/MacroBreakdownPanel';
 import { store } from '../lib/storage';
 import { buildWeeklyPlan } from '../lib/workoutPlan';
-import type { CardioPref, Goal, Profile, ProblemArea } from '../types';
+import { computeProteinTargetG } from '../lib/macroEngine';
+import type {
+  CardioPref,
+  FatLossMode,
+  Goal,
+  LifestyleActivity,
+  Profile,
+  ProblemArea,
+} from '../types';
 
 const PROBLEM_AREAS: { key: ProblemArea; label: string }[] = [
   { key: 'core', label: 'Core' },
@@ -33,6 +41,19 @@ const CARDIO: { key: CardioPref; label: string }[] = [
   { key: 'low', label: 'Low (walks)' },
   { key: 'moderate', label: 'Moderate (2–3 sessions)' },
   { key: 'high', label: 'High (4+ sessions)' },
+];
+
+const LIFESTYLE: { key: LifestyleActivity; label: string; sub: string }[] = [
+  { key: 'sedentary', label: 'Sedentary', sub: 'Desk job, drive everywhere, < 5k steps' },
+  { key: 'lightly_active', label: 'Lightly active', sub: 'Default. Some standing/walking, no step goal' },
+  { key: 'moderately_active', label: 'Moderately active', sub: 'On feet most of the day (retail, nursing, parent of toddlers)' },
+  { key: 'very_active', label: 'Very active', sub: 'Manual labor (construction, moving, landscaping)' },
+];
+
+const FAT_LOSS_MODES: { key: FatLossMode; label: string; sub: string }[] = [
+  { key: 'conservative', label: 'Conservative', sub: '~0.6 lb/wk · protect strength' },
+  { key: 'standard', label: 'Standard', sub: '~1 lb/wk · the sweet spot' },
+  { key: 'performance', label: 'Performance', sub: '~1.2 lb/wk · for users with significant fat to lose' },
 ];
 
 export default function ProfilePage() {
@@ -216,6 +237,52 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          <div className="mt-4">
+            <span className="label">Lifestyle activity (NEAT)</span>
+            <div className="flex flex-wrap gap-2">
+              {LIFESTYLE.map((l) => {
+                const active = (p.lifestyleActivity ?? 'lightly_active') === l.key;
+                return (
+                  <button
+                    key={l.key}
+                    onClick={() => update('lifestyleActivity', l.key)}
+                    className={`btn flex-col items-start text-left ${active ? 'btn-primary' : 'btn-outline'}`}
+                    title={l.sub}
+                  >
+                    <span>{l.label}</span>
+                    <span className="text-[10px] font-normal opacity-80">{l.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[11px] text-zinc-500">
+              Lifting + cardio are credited separately as workout calories — don't bump
+              this just because you train. Default is Lightly active.
+            </p>
+          </div>
+
+          {p.goal === 'fat_loss' && (
+            <div className="mt-4">
+              <span className="label">Fat-loss mode</span>
+              <div className="flex flex-wrap gap-2">
+                {FAT_LOSS_MODES.map((m) => {
+                  const active = (p.fatLossMode ?? 'standard') === m.key;
+                  return (
+                    <button
+                      key={m.key}
+                      onClick={() => update('fatLossMode', m.key)}
+                      className={`btn flex-col items-start text-left ${active ? 'btn-primary' : 'btn-outline'}`}
+                      title={m.sub}
+                    >
+                      <span>{m.label}</span>
+                      <span className="text-[10px] font-normal opacity-80">{m.sub}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
             <input
               type="checkbox"
@@ -303,12 +370,9 @@ export default function ProfilePage() {
               />
             </Field>
             <Field label="Protein target (g)">
-              <input
-                type="number"
-                className="input"
-                value={p.proteinTargetG ?? ''}
-                placeholder={`auto: computed from goal + bodyweight`}
-                onChange={(e) => update('proteinTargetG', e.target.value ? Number(e.target.value) : undefined)}
+              <ProteinTargetField
+                profile={p}
+                onChange={(g) => update('proteinTargetG', g)}
               />
             </Field>
             <Field label="Food dislikes (comma)">
@@ -387,5 +451,62 @@ function Field({ label, children, className = '' }: { label: string; children: R
       <span className="label">{label}</span>
       {children}
     </label>
+  );
+}
+
+/**
+ * Protein input with an auto-computed readout. When the user has not set
+ * a manual override, the field is empty (so they aren't tricked into
+ * thinking the auto value is locked in) but a readout below the input
+ * shows the computed value, e.g. "Auto: 185g". Editing the field stores
+ * the value as a manual override; "Use auto" clears it back to undefined.
+ */
+function ProteinTargetField({
+  profile,
+  onChange,
+}: {
+  profile: Profile;
+  onChange: (g: number | undefined) => void;
+}) {
+  const isManual = !!profile.proteinTargetG && profile.proteinTargetG > 0;
+  // Build a temp profile WITHOUT the override so we can show what the
+  // auto value would be even when a manual override is set.
+  const autoProfile: Profile = { ...profile, proteinTargetG: undefined };
+  const autoG = computeProteinTargetG(autoProfile);
+
+  return (
+    <div>
+      <input
+        type="number"
+        className="input"
+        value={profile.proteinTargetG ?? ''}
+        placeholder={`${autoG} (auto)`}
+        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
+      />
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500">
+        <span>
+          {isManual ? (
+            <>
+              Manual override active. Auto would be{' '}
+              <span className="font-semibold text-zinc-300">{autoG}g</span>.
+            </>
+          ) : (
+            <>
+              <span className="font-semibold text-zinc-300">{autoG}g</span> auto —
+              calculated from goal, weight, and goal weight. Edit to override.
+            </>
+          )}
+        </span>
+        {isManual && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            className="rounded-md border border-ink-700 bg-ink-850 px-2 py-0.5 text-[11px] font-semibold text-zinc-200 hover:bg-ink-800"
+          >
+            Use auto protein
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

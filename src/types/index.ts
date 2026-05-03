@@ -2,6 +2,12 @@
 
 export type Goal = 'fat_loss' | 'strength' | 'recomp' | 'meet_prep';
 export type CardioPref = 'none' | 'low' | 'moderate' | 'high';
+export type LifestyleActivity =
+  | 'sedentary'
+  | 'lightly_active'
+  | 'moderately_active'
+  | 'very_active';
+export type FatLossMode = 'conservative' | 'standard' | 'performance';
 export type WorkoutDay =
   | 'squat'
   | 'bench'
@@ -42,6 +48,24 @@ export interface Profile {
   foodSensitivities: string[];
   mealCount: number;
   cardioPref: CardioPref;
+  /**
+   * Lifestyle activity level — non-exercise daily movement (NEAT). Used to
+   * pick the BMR multiplier independently of the workout schedule. The
+   * macroEngine credits lifting and cardio as ADDITIONAL calorie burn on
+   * top of this; it does NOT roll workouts into the lifestyle multiplier.
+   *
+   * Default: 'lightly_active' (≈1.3) — covers a desk job with normal
+   * walking but no formal step tracking. Don't bump this without step
+   * data; over-crediting NEAT is the #1 reason fat loss stalls.
+   */
+  lifestyleActivity?: LifestyleActivity;
+  /**
+   * How aggressive the fat-loss deficit is when `goal === 'fat_loss'`.
+   * Default: 'standard' (~1 lb/wk). 'conservative' protects strength on
+   * recomp-leaning users; 'performance' is for users with significant
+   * fat to lose who can sustain a deeper cut.
+   */
+  fatLossMode?: FatLossMode;
   onWegovy: boolean;
   proteinTargetG?: number;
   /**

@@ -1,8 +1,21 @@
 import { useMemo } from 'react';
-import { Calculator } from 'lucide-react';
+import { Calculator, Info } from 'lucide-react';
 import { Card, Pill, SectionHeader } from './ui';
 import { computeMacroBreakdown } from '../lib/macroEngine';
 import type { Profile } from '../types';
+
+const LIFESTYLE_LABEL: Record<NonNullable<Profile['lifestyleActivity']>, string> = {
+  sedentary: 'Sedentary',
+  lightly_active: 'Lightly active',
+  moderately_active: 'Moderately active',
+  very_active: 'Very active',
+};
+
+const FATLOSS_MODE_LABEL = {
+  conservative: 'Conservative (~0.6 lb/wk)',
+  standard: 'Standard (~1 lb/wk)',
+  performance: 'Performance (~1.2 lb/wk)',
+} as const;
 
 /**
  * "Show your work" macro card. Renders the live calculation derived from
@@ -13,6 +26,7 @@ import type { Profile } from '../types';
  */
 export default function MacroBreakdownPanel({ profile }: { profile: Profile }) {
   const b = useMemo(() => computeMacroBreakdown(profile), [profile]);
+
   const goalLabel: Record<Profile['goal'], string> = {
     fat_loss: 'Fat loss',
     recomp: 'Recomposition',
@@ -37,11 +51,32 @@ export default function MacroBreakdownPanel({ profile }: { profile: Profile }) {
         <Stat label="Calories (training)" value={b.trainingDayTarget} unit="kcal" highlight />
         <Stat label="Protein" value={b.proteinG} unit="g/day" highlight />
         <Stat label="Calories (rest)" value={b.restDayTarget} unit="kcal" />
-        <Stat
-          label="Active days"
-          value={Number.isInteger(b.activeDays) ? b.activeDays : b.activeDays.toFixed(1)}
-          unit="/wk"
-        />
+        <Stat label="Weekly avg TDEE" value={b.dailyAvgMaintenanceTDEE} unit="kcal" />
+      </div>
+
+      {/* Why this target */}
+      <div className="mt-4 rounded-xl border border-accent/30 bg-accent/5 p-3 text-sm text-zinc-200">
+        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-rose-glow">
+          <Info size={12} /> Why this target
+        </div>
+        <p className="mt-1.5 leading-relaxed">{b.goalDeficitNote}</p>
+        {b.heavyCapApplied.train && (
+          <p className="mt-1 text-xs text-warning">
+            Training-day target was capped at the heavy-bodyweight fat-loss ceiling
+            (2,150 kcal). Bump Lifestyle activity above "Lightly active" if step
+            data supports it.
+          </p>
+        )}
+        {b.coachOffsetKcal !== 0 && (
+          <p className="mt-1 text-xs text-zinc-300">
+            Coach offset: {b.coachOffsetKcal > 0 ? '+' : ''}
+            {b.coachOffsetKcal} kcal applied from your accepted weekly review.
+          </p>
+        )}
+        <p className="mt-1.5 text-[11px] text-zinc-400">
+          This is a starting target. Weekly trend decides future adjustments — log
+          daily weight and run a /check-in once a week.
+        </p>
       </div>
 
       {/* Macros table */}
@@ -87,48 +122,68 @@ export default function MacroBreakdownPanel({ profile }: { profile: Profile }) {
             ).toFixed(1)} cm − 5 × ${b.age} − 161`}
           />
           <Row
-            label="Active days/week"
-            value={`${
-              Number.isInteger(b.activeDays) ? b.activeDays : b.activeDays.toFixed(1)
-            }`}
-            note={`${profile.trainingDaysPerWeek} strength + ${
-              profile.cardioPref === 'high'
-                ? 4
-                : profile.cardioPref === 'moderate'
-                ? '2.5'
-                : profile.cardioPref === 'low'
-                ? 1
-                : 0
-            } from cardio`}
+            label="Lifestyle activity (NEAT)"
+            value={`${LIFESTYLE_LABEL[b.lifestyle]} (×${b.lifestyleMultiplier.toFixed(2)})`}
+            note="Daily non-exercise activity. Workouts are credited separately below — no double-counting."
           />
           <Row
-            label="Activity multiplier"
-            value={b.weeklyMultiplier.toFixed(2)}
-            note="Mifflin brackets: ≤1 day = 1.2, 2–3 = 1.4, 4–5 = 1.55, 6+ = 1.7"
+            label="Lift sessions"
+            value={`${b.liftSessionsPerWeek}/wk × ${b.liftKcalPerSession} kcal`}
+            note={`Per-session credit ≈ ${b.liftKcalPerSession} kcal for a ${profile.weightLbs}-lb lifter (60-min strength)`}
+          />
+          <Row
+            label="Cardio sessions"
+            value={
+              b.cardioSessionsPerWeek > 0
+                ? `${b.cardioSessionsPerWeek}/wk × ${b.cardioKcalPerSession} kcal`
+                : 'none'
+            }
+            note={
+              b.cardioSessionsPerWeek > 0
+                ? `Per-session credit ≈ ${b.cardioKcalPerSession} kcal (moderate intensity)`
+                : 'Cardio preference is set to none'
+            }
+          />
+          <Row
+            label="Weekly maintenance TDEE"
+            value={`${b.weeklyMaintenanceTDEE} kcal`}
+            note={`Daily avg ≈ ${b.dailyAvgMaintenanceTDEE} kcal`}
           />
           <Row
             label="Training-day TDEE"
             value={`${b.trainingDayTdee} kcal`}
-            note={`BMR × ${(b.weeklyMultiplier + 0.05).toFixed(2)}`}
+            note="BMR × lifestyle + lift session"
           />
           <Row
             label="Rest-day TDEE"
             value={`${b.restDayTdee} kcal`}
-            note={`BMR × ${(b.weeklyMultiplier - 0.05).toFixed(2)}`}
+            note="BMR × lifestyle + averaged cardio"
           />
           <Row
             label={`Goal: ${goalLabel[profile.goal]}`}
-            value={`${b.goalDeficit > 0 ? '+' : ''}${b.goalDeficit} kcal`}
+            value={`${b.goalDeficit > 0 ? '+' : ''}${b.goalDeficit} kcal/day`}
             note={
-              profile.goal === 'fat_loss'
-                ? '~1 lb/wk fat loss'
-                : profile.goal === 'recomp'
-                ? 'small deficit + high protein'
-                : profile.goal === 'meet_prep'
-                ? 'slight surplus for performance'
-                : 'maintenance'
+              b.fatLossMode
+                ? `Fat-loss mode: ${FATLOSS_MODE_LABEL[b.fatLossMode]}`
+                : b.goalDeficitNote
             }
           />
+          {b.coachOffsetKcal !== 0 && (
+            <Row
+              label="Coach decision offset"
+              value={`${b.coachOffsetKcal > 0 ? '+' : ''}${b.coachOffsetKcal} kcal`}
+              note="From your last accepted weekly review"
+            />
+          )}
+          {(b.heavyCapApplied.train || b.heavyCapApplied.rest) && (
+            <Row
+              label="Heavy-bodyweight cap"
+              value={`${b.heavyCapApplied.train ? 'training capped' : ''}${
+                b.heavyCapApplied.train && b.heavyCapApplied.rest ? ' + ' : ''
+              }${b.heavyCapApplied.rest ? 'rest capped' : ''}`}
+              note="Above 200 lb on fat-loss with default lifestyle, ceilings: 2,150 train / 1,950 rest"
+            />
+          )}
           <Row
             label="Hard floor"
             value={`${b.hardFloor} kcal`}
