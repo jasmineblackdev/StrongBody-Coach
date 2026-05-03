@@ -254,6 +254,27 @@ export type AdherenceLevel = 'yes' | 'mostly' | 'no';
 export type CyclePhase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
 
 /**
+ * Per-meal feedback the user logs from the Meals page. Feeds the food
+ * response engine, which detects repeated trigger patterns. Lightweight
+ * structure so the Quick-log form stays fast.
+ */
+export interface MealFeedback {
+  id: string;
+  /** ISO timestamp when the meal happened. */
+  date: string;
+  /** Free-form label, e.g. "Breakfast", "Pre-workout". */
+  mealName: string;
+  /** Lower-cased ingredient tokens. The engine pattern-matches on these. */
+  ingredients: string[];
+  hungerAfter: number; // 1-10 (10 = ravenous)
+  bloatingAfter: number; // 1-10 (10 = severe bloat)
+  energyAfter: number; // 1-10 (10 = sharp / clean energy)
+  digestionAfter: number; // 1-10 (10 = comfortable)
+  /** Optional free-text — "felt heavy on squats", "clean run". */
+  workoutPerfNote?: string;
+}
+
+/**
  * Self-reported answer to "did your progress photos look different this
  * week?" — feeds the Photo Intelligence engine alongside measured data
  * (weight, waist) without ever driving plan changes alone.

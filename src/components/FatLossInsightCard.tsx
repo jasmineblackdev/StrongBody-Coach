@@ -6,6 +6,11 @@ import {
   FAT_LOSS_STATE_LABEL,
   type FatLossState,
 } from '../lib/femaleFatLossEngine';
+import {
+  forecastPlateau,
+  PLATEAU_LABEL,
+  PLATEAU_TONE,
+} from '../lib/plateauForecast';
 import { computeConfidence } from '../lib/confidenceScoreEngine';
 import { assessInjuryRisk } from '../lib/ml/injuryRisk';
 import { voiceForFemaleState } from '../lib/coachVoice';
@@ -51,6 +56,7 @@ export default function FatLossInsightCard() {
 
   const Icon = STATE_ICON[report.state];
   const voice = voiceForFemaleState(report.state);
+  const plateau = useMemo(() => forecastPlateau(store.getMetrics()), []);
 
   return (
     <Card className={report.tone === 'success' ? 'border-success/30' : 'border-accent/30'}>
@@ -80,6 +86,30 @@ export default function FatLossInsightCard() {
 
       <div className="mt-3">
         <ConfidenceBlock report={confidence} />
+      </div>
+
+      {/* Plateau forecast — forward-looking advisory. Always renders so
+          the user sees the forecast status even when it's "no plateau". */}
+      <div className="mt-3 rounded-2xl border border-ink-800 bg-ink-900/40 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-300">
+            Plateau forecast
+            <Pill tone={PLATEAU_TONE[plateau.status]}>
+              {PLATEAU_LABEL[plateau.status]}
+            </Pill>
+            <Pill>{plateau.confidence}</Pill>
+          </div>
+          <span className="text-[11px] text-zinc-500">
+            {plateau.ratePrior14 !== 0 || plateau.rateLast14 !== 0
+              ? `prior 14d ${plateau.ratePrior14 >= 0 ? '+' : ''}${plateau.ratePrior14} → last 14d ${plateau.rateLast14 >= 0 ? '+' : ''}${plateau.rateLast14} lb/wk`
+              : ''}
+          </span>
+        </div>
+        <p className="mt-1.5 text-sm font-semibold text-zinc-100">{plateau.headline}</p>
+        <p className="mt-0.5 text-xs text-zinc-300">{plateau.recommendation}</p>
+        <p className="mt-1.5 text-[11px] text-zinc-500">
+          Advisory only — does not override Coach Brain.
+        </p>
       </div>
 
       {report.blockedActions.length > 0 && (

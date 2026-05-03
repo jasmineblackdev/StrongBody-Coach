@@ -1,6 +1,7 @@
 import type {
   BodyMetric,
   CoachDecision,
+  MealFeedback,
   PlanProposal,
   Profile,
   WeeklyCheckIn,
@@ -17,6 +18,7 @@ const KEYS = {
   proposal: 'sbc:planProposal',
   checkIns: 'sbc:checkIns',
   coachDecisions: 'sbc:coachDecisions',
+  mealFeedback: 'sbc:mealFeedback',
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -152,6 +154,25 @@ export const store = {
   },
   setCoachDecisions: (ds: CoachDecision[]) => {
     write(KEYS.coachDecisions, ds);
+    emit();
+  },
+
+  // Per-meal feedback log (newest first). Drives the food response engine.
+  getMealFeedback: (): MealFeedback[] =>
+    read<MealFeedback[]>(KEYS.mealFeedback, []),
+  addMealFeedback: (f: MealFeedback) => {
+    const all = store.getMealFeedback();
+    all.unshift(f);
+    write(KEYS.mealFeedback, all);
+    emit();
+  },
+  setMealFeedback: (fs: MealFeedback[]) => {
+    write(KEYS.mealFeedback, fs);
+    emit();
+  },
+  deleteMealFeedback: (id: string) => {
+    const all = store.getMealFeedback().filter((f) => f.id !== id);
+    write(KEYS.mealFeedback, all);
     emit();
   },
 

@@ -3,6 +3,7 @@ import { Save, Plus, Trash2, ClipboardCheck, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
 import RestTimer from '../components/RestTimer';
+import FormRiskPanel from '../components/FormRiskPanel';
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import { dayLabel } from '../lib/workoutPlan';
@@ -160,6 +161,8 @@ export default function WorkoutLoggerPage() {
         <h1 className="h1">Log workout</h1>
         <p className="muted text-sm mt-1">Be honest with RPE and pain — the engine adjusts your next session.</p>
       </header>
+
+      <FormRiskPanel />
 
       <Card>
         <div className="flex flex-wrap items-center gap-2">

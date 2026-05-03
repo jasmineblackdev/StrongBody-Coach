@@ -6,6 +6,7 @@ import { useStoreVersion } from '../hooks/useStore';
 import { buildDailyPlan } from '../lib/mealPlan';
 import { computeProteinTargetG } from '../lib/macroEngine';
 import { generateMealNarrative } from '../lib/ai/mealAi';
+import FoodResponsePanel from '../components/FoodResponsePanel';
 
 /**
  * M5 fix: derive default "is today a training day" from day-of-week +
@@ -141,6 +142,10 @@ export default function MealsPage() {
             ))}
           </div>
         </Card>
+
+        <div className="md:col-span-3">
+          <FoodResponsePanel />
+        </div>
 
         <Card className="md:col-span-3">
           <SectionHeader title="Grocery list" subtitle="Generated from your meals" />
