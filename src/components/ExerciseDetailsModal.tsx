@@ -7,9 +7,24 @@ import {
   AlertTriangle,
   Sparkles,
   PlayCircle,
+  ShieldAlert,
+  Wand2,
+  Award,
 } from 'lucide-react';
 import { Pill } from './ui';
-import { findExercise } from '../lib/exerciseLibrary';
+import { findExercise, hasJointWarning, type DifficultyLevel } from '../lib/exerciseLibrary';
+
+const DIFFICULTY_LABEL: Record<DifficultyLevel, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+};
+
+const DIFFICULTY_TONE: Record<DifficultyLevel, 'success' | 'warning' | 'danger'> = {
+  beginner: 'success',
+  intermediate: 'warning',
+  advanced: 'danger',
+};
 
 interface Props {
   exerciseName: string;
@@ -54,12 +69,17 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
             </h2>
             {entry ? (
               <div className="mt-1.5 flex flex-wrap gap-1.5">
-                <Pill tone="accent">
-                  <Target size={12} /> {entry.primaryMuscle}
-                </Pill>
+                {entry.primaryMuscles.map((m) => (
+                  <Pill key={m} tone="accent">
+                    <Target size={12} /> {m}
+                  </Pill>
+                ))}
                 {entry.secondaryMuscles.map((m) => (
                   <Pill key={m}>{m}</Pill>
                 ))}
+                <Pill tone={DIFFICULTY_TONE[entry.difficultyLevel]}>
+                  <Award size={12} /> {DIFFICULTY_LABEL[entry.difficultyLevel]}
+                </Pill>
               </div>
             ) : (
               <p className="muted mt-1 text-xs">Not in the library yet.</p>
@@ -95,6 +115,47 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
             </div>
           ) : (
             <>
+              {/* Universal warning — surfaces for any exercise; emphasized when joints are at risk */}
+              <div
+                className={`rounded-xl border p-3 text-sm ${
+                  hasJointWarning(entry)
+                    ? 'border-danger/40 bg-danger/10 text-danger'
+                    : 'border-warning/30 bg-warning/10 text-warning'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <ShieldAlert size={16} className="mt-0.5 shrink-0" />
+                  <div className="text-zinc-100">
+                    <span className="font-semibold">Stop if you feel pain outside target muscles.</span>{' '}
+                    <span className="text-zinc-300">
+                      This is coaching guidance, not medical advice. If something hurts, rack it.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form & Muscle Engagement — the headline section */}
+              <Section
+                title="Form & muscle engagement"
+                icon={<Sparkles size={14} />}
+                tone="accent"
+              >
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-success/30 bg-success/10 p-3">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-success">
+                      What you should feel
+                    </div>
+                    <p className="mt-1 text-sm leading-relaxed text-zinc-100">{entry.feel}</p>
+                  </div>
+                  <div className="rounded-xl border border-danger/30 bg-danger/10 p-3">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-danger">
+                      What you should NOT feel
+                    </div>
+                    <p className="mt-1 text-sm leading-relaxed text-zinc-100">{entry.avoidFeel}</p>
+                  </div>
+                </div>
+              </Section>
+
               <Section title="Setup" icon={<Wrench size={14} />}>
                 <ul className="space-y-1.5 text-sm text-zinc-200">
                   {entry.setupCues.map((c, i) => (
@@ -108,7 +169,7 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
 
               <Section title="Form (step by step)" icon={<ListOrdered size={14} />}>
                 <ol className="space-y-2 text-sm text-zinc-200">
-                  {entry.formCues.map((c, i) => (
+                  {entry.formSteps.map((c, i) => (
                     <li key={i} className="flex gap-3">
                       <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[11px] font-semibold text-rose-glow">
                         {i + 1}
@@ -119,25 +180,23 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
                 </ol>
               </Section>
 
-              <Section title="Common mistakes" icon={<AlertTriangle size={14} />} tone="warning">
-                <ul className="space-y-1.5 text-sm text-zinc-200">
+              <Section title="Mistakes & quick fixes" icon={<AlertTriangle size={14} />} tone="warning">
+                <ul className="space-y-3 text-sm text-zinc-200">
                   {entry.commonMistakes.map((m, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-warning" />
-                      <span>{m}</span>
+                    <li key={i} className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warning" />
+                        <div className="font-semibold text-zinc-100">{m}</div>
+                      </div>
+                      {entry.corrections[i] && (
+                        <div className="mt-1.5 flex items-start gap-2 pl-6">
+                          <Wand2 size={12} className="mt-1 shrink-0 text-success" />
+                          <span className="text-xs text-zinc-300">{entry.corrections[i]}</span>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
-              </Section>
-
-              <Section
-                title="What you should feel"
-                icon={<Sparkles size={14} />}
-                tone="accent"
-              >
-                <p className="text-sm leading-relaxed text-zinc-100">
-                  {entry.whatYouShouldFeel}
-                </p>
               </Section>
             </>
           )}

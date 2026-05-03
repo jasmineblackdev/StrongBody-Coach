@@ -1,20 +1,37 @@
 // Local exercise library. No external APIs.
 // Coaching content emphasizes bracing, glute engagement, core control, and
 // lower-back safety — the things that actually keep you healthy under load.
+//
+// Structured around the kind of cues an ISSA-credentialed trainer would give
+// in person: what to feel, what to NOT feel, common mistakes paired 1:1 with
+// corrections, and a difficulty marker so we can scale progression.
+
+export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced';
 
 export interface ExerciseEntry {
   /** Canonical display name. */
   name: string;
   /** Alternate names that may show up in the plan or logs. */
   aliases?: string[];
-  primaryMuscle: string;
+  /** Primary movers (1–3 muscles). */
+  primaryMuscles: string[];
+  /** Synergists / stabilizers worth naming. */
   secondaryMuscles: string[];
+  /** What the user SHOULD feel (correct muscle engagement). */
+  feel: string;
+  /**
+   * Pain or wrong engagement that should NOT happen. Surfaced as a warning
+   * badge in the UI when it mentions joints (low back, knees, shoulders).
+   */
+  avoidFeel: string;
   setupCues: string[];
   /** Step-by-step movement cues, in order. */
-  formCues: string[];
+  formSteps: string[];
+  /** Common mistakes — paired 1:1 with `corrections` by index. */
   commonMistakes: string[];
-  /** "What you should feel" — coaching language, not anatomy. */
-  whatYouShouldFeel: string;
+  /** Quick fixes for each mistake (same index as `commonMistakes`). */
+  corrections: string[];
+  difficultyLevel: DifficultyLevel;
   videoUrl?: string;
   imageUrl?: string;
 }
@@ -23,96 +40,128 @@ const LIBRARY: ExerciseEntry[] = [
   {
     name: 'Back Squat',
     aliases: ['Barbell Back Squat'],
-    primaryMuscle: 'Quads',
+    primaryMuscles: ['Quadriceps'],
     secondaryMuscles: ['Glutes', 'Hamstrings', 'Spinal erectors', 'Core'],
+    feel:
+      'Quads loading hard on the way down, glutes firing strong out of the hole, core like a steel cylinder the entire rep. Lower back should feel supported, never strained.',
+    avoidFeel:
+      "Sharp lower-back pain or pinching, knees caving inward, pressure in the front of your knees. If your low back takes over before your legs do, stop the set.",
     setupCues: [
       'Bar on upper traps (high-bar) or rear delts (low-bar). Pick one and stick with it.',
       'Hands as close as your shoulders allow — tight grip = tight upper back.',
       'Stance roughly shoulder-width, toes slightly out. Find what lets you hit depth without pain.',
       'Before you unrack: big breath into the belly, brace 360° (front, sides, back).',
     ],
-    formCues: [
+    formSteps: [
       'Walk back in 2–3 steps. No more dancing.',
       'Take another big breath, brace hard, hold the air.',
       'Break at the hips and knees together. Drive your knees out as you sit between them.',
-      'Hit depth (hip crease below knee) with control. Don\'t collapse.',
+      "Hit depth (hip crease below knee) with control. Don't collapse.",
       'Out of the hole: drive the floor away, hips and shoulders rising together. Squeeze glutes at the top.',
     ],
     commonMistakes: [
-      'Knees caving in — push them out the entire rep.',
-      'Butt wink (lumbar tucking under at depth) — usually means too deep for your hip mobility, or no bracing.',
-      'Looking up — keeps neck strained and hips shoot up. Look at a spot 6 ft in front of you.',
-      'Letting the bar drift forward over your toes — keep it stacked over mid-foot.',
-      'Losing your brace before the lift — exhale only after lockout.',
+      'Knees caving in (valgus collapse).',
+      'Butt wink — lumbar tucking under at depth.',
+      'Looking straight up — neck strained, hips shoot up.',
+      'Bar drifting forward over toes.',
+      'Losing your brace before the lift.',
     ],
-    whatYouShouldFeel:
-      'Quads loading hard on the way down, glutes firing strong out of the hole, core like a steel cylinder the entire rep. Lower back should feel supported, never strained.',
+    corrections: [
+      'Cue "spread the floor" with your feet — push knees out toward your pinky toes the entire descent and ascent.',
+      "Stop the rep an inch above your butt-wink point. If it's mobility, drill ankle dorsiflexion + 90/90 hips. If it's bracing, take more air.",
+      'Pick a spot on the floor 6 ft in front of you and lock your gaze there for the whole set.',
+      'Keep weight on mid-foot. Cue: "feel the heel and the ball of the big toe equally."',
+      'Exhale only after lockout. Take a fresh brace before each rep — never reuse air across reps.',
+    ],
+    difficultyLevel: 'intermediate',
   },
 
   {
     name: 'Paused Squat',
     aliases: ['Pause Squat', 'Paused Back Squat'],
-    primaryMuscle: 'Quads',
+    primaryMuscles: ['Quadriceps'],
     secondaryMuscles: ['Glutes', 'Core', 'Spinal erectors'],
+    feel:
+      'Massive bracing demand and pure leg work coming out of the bottom. Builds the bottom-end strength that fixes a stalling squat.',
+    avoidFeel:
+      "Lower-back pinching, the bar feeling like it's collapsing forward, or any joint pain in the bottom position.",
     setupCues: [
       'Same setup as Back Squat. Use ~70–80% of your normal squat working weight.',
-      'You\'ll need a bigger brace than usual — load more air.',
+      "You'll need a bigger brace than usual — load more air.",
     ],
-    formCues: [
+    formSteps: [
       'Descend with control to depth.',
-      'Pause for 2 full seconds at the bottom. Stay tight — no relaxing into the position.',
+      'Pause for 2 full seconds at the bottom. Stay tight — no relaxing.',
       'Maintain knees out, chest up, brace held the entire pause.',
       'Drive up explosively from the dead-stop position.',
     ],
     commonMistakes: [
-      'Relaxing in the hole and bouncing out — defeats the purpose entirely.',
-      'Going too heavy — paused work humbles you.',
-      'Losing the brace during the pause — keep the air in.',
-      'Letting knees collapse during the pause.',
+      'Relaxing in the hole and bouncing out.',
+      'Going too heavy.',
+      'Losing the brace during the pause.',
+      'Knees collapsing during the pause.',
     ],
-    whatYouShouldFeel:
-      'Massive bracing demand and pure leg work coming out of the bottom. This builds the bottom-end strength that lets you fix a stalling squat. Time under tension is the point.',
+    corrections: [
+      'Stay rigid through the pause. Treat it like a static lift — every muscle still working.',
+      'Drop 15–20% from your normal squat weight. Paused work humbles you.',
+      'Keep the air in. Exhale only after lockout, never during the pause.',
+      'Cue "knees over pinky toes" the entire pause; keep tension actively pushing them out.',
+    ],
+    difficultyLevel: 'intermediate',
   },
 
   {
     name: 'Front Squat',
     aliases: ['Barbell Front Squat'],
-    primaryMuscle: 'Quads',
+    primaryMuscles: ['Quadriceps'],
     secondaryMuscles: ['Upper back', 'Core', 'Glutes'],
+    feel:
+      'Quads working harder than back squats, upper back lit up holding the rack, almost no demand on lower back. The swap when your low back needs a break.',
+    avoidFeel:
+      'Wrist pain, neck or throat pressure from the bar choking you, lower back rounding at depth.',
     setupCues: [
       'Bar across front delts, fingers under just to keep it on the shelf.',
       'Elbows pointed straight forward and HIGH. The shelf is your delts, not your hands.',
       'Stance roughly shoulder-width, toes slightly out. Most lifters squat narrower for fronts.',
       'Big breath, brace 360° before you unrack.',
     ],
-    formCues: [
+    formSteps: [
       'Stay upright — torso angle is much more vertical than back squat.',
       'Sit straight down between your knees, not back.',
       'Keep elbows up the entire rep. If they drop, the bar rolls.',
       'Drive up out of the hole through your heels and mid-foot.',
     ],
     commonMistakes: [
-      'Dropping the elbows on the way up — most common cause of failed reps.',
-      'Rounding the upper back — practice with empty bar to fix.',
-      'Trying to squat low-bar style — torso angle is too forward.',
-      'Wrist pain — improve front-rack mobility instead of grinding through it.',
+      'Dropping the elbows on the way up.',
+      'Rounding the upper back.',
+      'Trying to squat low-bar style with a forward torso.',
+      'Wrist pain.',
     ],
-    whatYouShouldFeel:
-      'Quads working harder than back squats, upper back lit up holding the rack position, and almost no demand on lower back. This is the swap when your low back needs a break.',
+    corrections: [
+      'Cue "elbows to the ceiling" through the entire ascent. If they drop, the bar rolls and the rep dies.',
+      'Drill thoracic extension — empty bar fronts, foam roller t-spine work, dead-hang scap retractions before sets.',
+      "Re-set torso angle: chest tall, not chest forward. Stance can narrow if you've got good ankle mobility.",
+      'Improve front-rack mobility (lat / lat-stretch / wrist circles) instead of grinding. Strap the bar if mobility is the limit.',
+    ],
+    difficultyLevel: 'intermediate',
   },
 
   {
     name: 'Bench Press',
     aliases: ['Barbell Bench Press', 'Flat Bench Press'],
-    primaryMuscle: 'Chest',
+    primaryMuscles: ['Chest'],
     secondaryMuscles: ['Triceps', 'Front delts', 'Lats', 'Upper back'],
+    feel:
+      "Chest stretching at the bottom, upper back tight as a coiled spring, triceps locking out at the top. Feet should feel planted like you're about to leg-press the floor.",
+    avoidFeel:
+      'Sharp shoulder pain (especially front of shoulder), wrist pain, neck strain. If you feel the press in your shoulder before your chest, fix the setup.',
     setupCues: [
       'Eyes under the bar. Plant feet hard into the floor — leg drive matters.',
       'Slight arch in upper back. Ribs proud, butt stays on the bench.',
       'Pull shoulder blades down and together. Lock them there for the entire set.',
       'Grip width: bar across mid-palm, wrist stacked over forearm. Most lifters bench too wide.',
     ],
-    formCues: [
+    formSteps: [
       'Take a huge breath into the chest, brace.',
       'Unrack with straight arms, walk it out over your shoulders.',
       'Lower the bar to lower-chest / sternum line. Tuck elbows ~45°, not flared 90°.',
@@ -120,21 +169,31 @@ const LIBRARY: ExerciseEntry[] = [
       'Drive bar up and slightly back over the shoulder. Squeeze chest and triceps at lockout.',
     ],
     commonMistakes: [
-      'Flared elbows at 90° — wrecks shoulders, weakens the press.',
-      'Letting butt rise off the bench — 4-point contact rule: head, upper back, butt, both feet.',
-      'Bouncing the bar — turns it into a circus, masks weak points.',
-      'Touching too high (collarbone) — overloads shoulders.',
-      'Loose upper back — bar speed dies, no power transfer.',
+      'Flared elbows at 90°.',
+      'Butt rising off the bench.',
+      'Bouncing the bar off the chest.',
+      'Touching too high (collarbone).',
+      'Loose upper back — bar speed dies.',
     ],
-    whatYouShouldFeel:
-      'Chest stretching at the bottom, upper back tight as a coiled spring, triceps locking out at the top. Feet should feel planted like you\'re about to leg-press the floor.',
+    corrections: [
+      'Cue "tuck elbows ~45° from torso." Picture trying to bend the bar in half on the way down.',
+      '4-point contact rule: head, upper back, butt, both feet. If your butt comes up, plant feet harder and use less weight.',
+      'Pause every rep on the chest for a 1-count. If you can\'t do that, the weight\'s controlling you.',
+      'Touch lower-chest / sternum line. Cue: "bar to my heart." High touch = shoulder dominant.',
+      'Pull the bar apart with your hands and drive shoulder blades into the bench. Locked-down upper back = power transfer.',
+    ],
+    difficultyLevel: 'intermediate',
   },
 
   {
     name: 'Deadlift',
     aliases: ['Conventional Deadlift', 'Barbell Deadlift'],
-    primaryMuscle: 'Posterior chain',
-    secondaryMuscles: ['Glutes', 'Hamstrings', 'Lats', 'Traps', 'Grip', 'Quads'],
+    primaryMuscles: ['Posterior chain', 'Glutes', 'Hamstrings'],
+    secondaryMuscles: ['Lats', 'Traps', 'Grip', 'Quads', 'Spinal erectors'],
+    feel:
+      'Hamstrings and glutes loading at setup, lats locking the bar to your body, then a powerful leg drive followed by a sharp glute squeeze at lockout. Lower back should feel supported by the brace, never doing the lifting.',
+    avoidFeel:
+      'Sharp lower-back pain, lumbar rounding under load, knee pain. The lift should feel like a leg drive with a brace — never a back lift.',
     setupCues: [
       'Bar over mid-foot, about 1 inch from your shins.',
       'Feet roughly hip-width, toes slightly out.',
@@ -142,254 +201,338 @@ const LIBRARY: ExerciseEntry[] = [
       'Big air. Drop hips slightly, shoulders just in front of the bar.',
       'Pull slack out of the bar — bend the bar around you, lats engaged.',
     ],
-    formCues: [
+    formSteps: [
       'Wedge yourself into position — hips down, chest up, lats locked.',
-      'Push the floor away with your legs. Don\'t pull with your arms — they\'re just hooks.',
+      "Push the floor away with your legs. Don't pull with your arms — they're just hooks.",
       'Hips and shoulders rise at the same rate. Bar drags up your shins.',
-      'Lock out by squeezing glutes — don\'t hyperextend by leaning back.',
+      "Lock out by squeezing glutes — don't hyperextend by leaning back.",
       'Lower under control — same path, hinge at hips first, then bend knees.',
     ],
     commonMistakes: [
-      'Rounding the lower back — back the weight off and rebuild bracing.',
-      'Hips shooting up first while shoulders stay down — turns it into a stiff-leg with broken bracing.',
-      'Jerking the bar off the floor — pull the slack out first, then push.',
-      'Hyperextending at lockout — straight up, glutes tight, ribs over hips. Done.',
-      'Letting the bar drift away from the body — costly leverage, brutal on the back.',
+      'Lower back rounding under the bar.',
+      'Hips shooting up first while shoulders stay down (stiff-leg).',
+      'Jerking the bar off the floor.',
+      'Hyperextending at lockout (leaning back).',
+      'Bar drifting away from the body.',
     ],
-    whatYouShouldFeel:
-      'Hamstrings and glutes loading at setup, lats locking the bar to your body, then a powerful leg drive followed by a sharp glute squeeze at lockout. Lower back should feel supported by the brace, never doing the lifting.',
+    corrections: [
+      "STOP the set. Drop the weight 15–20%. Rebuild bracing with paused-below-knee deadlifts and Pallof Press until you can hold neutral spine through the lift.",
+      'Cue "chest up, push the floor away." Drill tempo deadlifts (3-second eccentric) to fix hip-shoot timing.',
+      'Pull the slack out of the bar BEFORE pulling. Take 2 seconds to wedge in, then push.',
+      'Finish standing tall: glutes tight, ribs over hips, shoulders directly above bar. No leaning.',
+      'Keep lats engaged — cue "armpits down, oranges in your armpits squeezed." Bar should drag up shins, lightly.',
+    ],
+    difficultyLevel: 'advanced',
   },
 
   {
     name: 'Romanian Deadlift',
     aliases: ['RDL', 'Barbell Romanian Deadlift', 'Dumbbell Romanian Deadlift'],
-    primaryMuscle: 'Hamstrings',
-    secondaryMuscles: ['Glutes', 'Lower back', 'Lats'],
+    primaryMuscles: ['Hamstrings'],
+    secondaryMuscles: ['Glutes', 'Spinal erectors', 'Lats'],
+    feel:
+      'Deep, loaded stretch through your hamstrings on the way down. Glutes squeezing hard at the top. Lower back braced and stable, never the prime mover.',
+    avoidFeel:
+      'Lower-back ache, lumbar rounding, knees taking over the movement. The hamstrings should be screaming long before your back is.',
     setupCues: [
-      'Bar starts at hip level (rack pull start, or take it out of a deadlift).',
+      'Bar starts at hip level.',
       'Feet hip-width, soft knees (not locked, not bent — just unlocked).',
-      'Lats engaged, neutral spine. Tight grip on the bar.',
+      'Lats engaged, neutral spine. Tight grip.',
     ],
-    formCues: [
-      'Push hips straight back like you\'re closing a drawer with your butt.',
+    formSteps: [
+      "Push hips straight back like you're closing a drawer with your butt.",
       'Bar slides down close to thighs and shins.',
       'Stop when you feel a strong stretch in the hamstrings — usually mid-shin to just below the knee.',
       'Reverse by driving hips forward. Squeeze glutes at lockout, ribs down.',
-      'Knees stay soft and tracked the entire rep — don\'t turn it into a deadlift.',
+      "Knees stay soft and tracked the entire rep — don't turn it into a deadlift.",
     ],
     commonMistakes: [
-      'Bending the knees instead of hinging — kills the hamstring stretch.',
-      'Rounding the lower back chasing more depth — depth is set by your hamstring flexibility, not ego.',
-      'Letting the bar drift away from the body — hits the back instead of the hams.',
-      'Hyperextending at lockout — finish standing tall, not leaning back.',
+      'Bending knees instead of hinging.',
+      'Rounding lower back chasing depth.',
+      'Bar drifting away from body.',
+      'Hyperextending at lockout.',
     ],
-    whatYouShouldFeel:
-      'Deep, loaded stretch through your hamstrings on the way down. Glutes squeezing hard at the top. Lower back braced and stable, never the prime mover.',
+    corrections: [
+      'Cue "push the wall behind you with your butt." Knees stay where they started — only hips move.',
+      'Stop where your hams feel stretched, NOT where you "should" go. Mobility builds; spinal flexion under load doesn\'t.',
+      'Brush the bar against your legs the entire rep. Cue "drag the bar down."',
+      'Finish standing tall — ribs over hips, glutes tight, no leaning back.',
+    ],
+    difficultyLevel: 'beginner',
   },
 
   {
     name: 'Hip Thrust',
     aliases: ['Barbell Hip Thrust', 'Hip Thrust Machine'],
-    primaryMuscle: 'Glutes',
+    primaryMuscles: ['Glutes'],
     secondaryMuscles: ['Hamstrings', 'Core'],
+    feel:
+      "Pure glute squeeze at the top. Glutes should feel cooked. If you feel it in your lower back, your ribs are flaring — fix that first, then add load.",
+    avoidFeel:
+      'Lower-back pinching at the top of the rep, hip-flexor strain, neck pressure. Lower back is the #1 risk on this lift — ribs DOWN saves you.',
     setupCues: [
       'Upper back on a bench, just below the shoulder blades. Bench should not slide.',
       'Bar across hips with a thick pad. Roll it into the hip crease.',
-      'Feet flat, shins roughly vertical at the top of the rep — find the right distance with empty bar first.',
+      'Feet flat, shins roughly vertical at the top of the rep.',
       'Tuck the chin slightly. Ribs DOWN, not flared.',
     ],
-    formCues: [
+    formSteps: [
       'Brace hard, push through your heels and mid-foot.',
-      'Drive hips up until thighs are parallel to floor — hip extension comes from glutes, not low back.',
-      'At the top: pause for 1 second, glutes squeezed like you\'re crushing a walnut.',
+      'Drive hips up until thighs are parallel to floor.',
+      "At the top: pause 1 second, glutes squeezed like you're crushing a walnut.",
       'Lower under control, ribs still pinned down.',
     ],
     commonMistakes: [
-      'Hyperextending the lumbar spine at the top — biggest cause of low-back pain on this lift. Ribs DOWN.',
-      'Leading the rep with the lower back instead of the glutes.',
-      'Half-repping — drive all the way to full hip extension.',
-      'Feet too close to butt — turns it into a quad exercise.',
-      'Feet too far out — kills glute engagement.',
+      'Hyperextending lumbar at the top.',
+      'Leading the rep with the lower back instead of glutes.',
+      'Half-repping — not driving to full hip extension.',
+      'Feet too close to butt (quad-dominant).',
+      'Feet too far out (kills glute engagement).',
     ],
-    whatYouShouldFeel:
-      'Pure glute squeeze at the top. If you feel it in your lower back, your ribs are flaring or your form is hyperextending — fix that first, then add load. Glutes should feel cooked.',
+    corrections: [
+      'Cue "ribs DOWN, chin tucked, posterior pelvic tilt at the top." Stop driving when your hips are level with your shoulders, not above.',
+      'Pre-squeeze glutes BEFORE the rep starts. Your butt initiates, not your low back.',
+      'Drive to thighs parallel — get full hip extension before lowering. Half reps = half results.',
+      'Move feet 2-3 inches farther out. Shins should be vertical at lockout.',
+      'Move feet closer in toward butt. If knees push past toes, you\'re too close — back off slightly.',
+    ],
+    difficultyLevel: 'beginner',
   },
 
   {
     name: 'Bulgarian Split Squat',
     aliases: ['Rear-Foot Elevated Split Squat', 'BSS', 'Dumbbell Bulgarian Split Squat'],
-    primaryMuscle: 'Quads / Glutes',
+    primaryMuscles: ['Quadriceps', 'Glutes'],
     secondaryMuscles: ['Hamstrings', 'Adductors', 'Core', 'Calves'],
+    feel:
+      "Front-leg quad and glute working hard. Real balance demand on the standing leg. The rear leg is just a kickstand — it shouldn't feel like a lunge.",
+    avoidFeel:
+      'Front knee pain (especially front of the knee), rear hip-flexor strain, lower-back rounding.',
     setupCues: [
-      'Rear foot on a bench (laces down or toes — pick what your ankle prefers).',
+      'Rear foot on a bench (laces down or toes — whichever your ankle prefers).',
       'Front foot far enough that knee tracks over mid-foot at the bottom.',
       'For glute bias: longer stride, slight forward torso lean.',
       'For quad bias: shorter stride, upright torso.',
       'Hold dumbbells at your sides, or a single goblet for upright variants.',
     ],
-    formCues: [
+    formSteps: [
       'Brace the core. Square your hips.',
       'Descend straight down — back knee toward the floor, front knee tracks over mid-foot.',
       'Pause briefly at the bottom (no resting on the bench).',
       'Drive through the front heel and mid-foot. Squeeze glute at the top.',
-      'Stay grounded through the whole foot — don\'t come up on your toes.',
+      "Stay grounded through the whole foot — don't come up on your toes.",
     ],
     commonMistakes: [
-      'Wobbling — go lighter, plant the front foot. Stability comes from time under load.',
-      'Front knee caving in — push it out toward your pinky toe.',
-      'Leaning too far back — overloads front knee, kills glute work.',
-      'Rear foot too active — it\'s a kickstand, not a load-bearer.',
+      'Wobbling through the rep.',
+      'Front knee caving in.',
+      'Leaning too far back — overloads front knee.',
+      "Rear foot too active — it's a kickstand, not a load-bearer.",
     ],
-    whatYouShouldFeel:
-      'Front-leg quad and glute working together hard. Real balance demand on the standing leg\'s ankle and hip. The rear leg is just for support — it shouldn\'t feel like a lunge.',
+    corrections: [
+      'Drop the weight 30%, plant the front foot, do 5 slow reps unloaded. Stability builds with reps, not load.',
+      'Cue "knee toward pinky toe." If it still caves, get an empty barbell on your back as a stability check.',
+      "Lean forward slightly (5–10°) for glute bias OR stay upright for quads. Don't lean BACK — that overloads the front knee.",
+      'Take 80% of your weight on the front leg. Rear is just balance support.',
+    ],
+    difficultyLevel: 'intermediate',
   },
 
   {
     name: 'Pallof Press',
     aliases: ['Cable Pallof Press', 'Anti-Rotation Press'],
-    primaryMuscle: 'Core (anti-rotation)',
-    secondaryMuscles: ['Obliques', 'Deep abdominals', 'Glutes (stabilizing)'],
+    primaryMuscles: ['Core', 'Obliques'],
+    secondaryMuscles: ['Deep abdominals', 'Glutes'],
+    feel:
+      'Deep ab and oblique tension on the side AWAY from the cable, fighting to keep you square. This is the bracing pattern that protects your spine under squats and deadlifts.',
+    avoidFeel:
+      'Lower-back strain, hip shifting side-to-side, breath-holding. The work is pure anti-rotation — nothing should hurt.',
     setupCues: [
       'Cable or band at chest height.',
       'Stand perpendicular to the cable, feet shoulder-width.',
       'Both hands on the handle, pulled to your chest.',
       'Glutes squeezed, ribs down, brace 360°.',
     ],
-    formCues: [
+    formSteps: [
       'Press the handle straight out from your chest until arms are extended.',
       'The cable wants to rotate you toward it — RESIST. Stay square.',
       'Hold the extended position for 1–2 seconds, breathing normally.',
-      'Pull back to your chest with control. Don\'t let it pull you in.',
+      "Pull back to your chest with control. Don't let it pull you in.",
       'Brace the entire set. Switch sides.',
     ],
     commonMistakes: [
-      'Letting the torso rotate toward the cable — the whole point is to NOT rotate.',
-      'Holding your breath — you should be able to breathe and brace at the same time.',
-      'Going too heavy — you should feel deep abs, not strain.',
-      'Hips shifting — keep them square to the front.',
+      'Letting the torso rotate toward the cable.',
+      'Holding your breath.',
+      'Going too heavy.',
+      'Hips shifting toward the cable.',
     ],
-    whatYouShouldFeel:
-      'Deep ab and oblique tension on the side AWAY from the cable, fighting to keep you square. This is the bracing pattern that protects your spine under squats and deadlifts.',
+    corrections: [
+      'Drop the weight if you can\'t hold square. The point is NOT to rotate.',
+      'Practice "breathing behind the brace" — slow inhale through nose, slow exhale, abs stay tight throughout.',
+      'You should feel deep abs working, not strain. If you\'re grunting, drop a plate.',
+      'Cue "hips facing forward" the entire set. If they shift, restart.',
+    ],
+    difficultyLevel: 'beginner',
   },
 
   {
     name: 'Dead Bug',
     aliases: ['Deadbug'],
-    primaryMuscle: 'Core (anti-extension)',
+    primaryMuscles: ['Core'],
     secondaryMuscles: ['Hip flexors', 'Deep abdominals', 'Diaphragm'],
+    feel:
+      'Deep core engagement, especially in your lower abs. Lower back should feel glued and supported — never strained. If your back lifts, your core lost.',
+    avoidFeel:
+      'Lower-back arching off the floor, hip-flexor cramping. Reduce range until your back stays glued.',
     setupCues: [
       'Lie on your back, knees bent 90° in tabletop, arms straight up over shoulders.',
       'Press your lower back FLAT against the floor. There should be no space.',
       'Brace by exhaling all the air out, then breathe behind the brace.',
     ],
-    formCues: [
+    formSteps: [
       'Slowly lower your right arm overhead AND your left leg toward the floor at the same time.',
-      'Keep your lower back glued to the floor the entire time. If it lifts, you went too far.',
+      'Keep your lower back glued to the floor the entire time.',
       'Pause at the bottom range you can hold — could be just a few inches.',
       'Return to start with control. Switch sides.',
     ],
     commonMistakes: [
-      'Lower back arching off the floor — biggest red flag. Reduce range until you can hold it.',
-      'Holding your breath — breathe slow and steady through the rep.',
-      'Rushing — slow is the entire point. 3 seconds out, 3 seconds back.',
-      'Letting the legs flop — every part of the movement is controlled.',
+      'Lower back arching off the floor.',
+      'Holding breath.',
+      'Rushing reps.',
+      'Letting legs flop.',
     ],
-    whatYouShouldFeel:
-      'Deep core engagement, especially in your lower abs. Lower back should feel glued and supported — never strained. If your back lifts, your core lost.',
+    corrections: [
+      'Reduce range. If your back lifts, you went too far. Tiny range with rigid back > full range with arched back.',
+      'Slow exhale on the way down, slow inhale on the return. Breath supports the brace.',
+      'Tempo: 3 seconds out, 1 second hold, 3 seconds back. The slowness is the point.',
+      'Every inch is controlled. If your foot drops fast, it\'s using gravity, not your core.',
+    ],
+    difficultyLevel: 'beginner',
   },
 
   {
     name: 'Farmer Carry',
-    aliases: ['Farmer\'s Walk', 'Farmer Walk'],
-    primaryMuscle: 'Grip',
-    secondaryMuscles: ['Forearms', 'Traps', 'Core', 'Upper back'],
+    aliases: ["Farmer's Walk", 'Farmer Walk'],
+    primaryMuscles: ['Grip', 'Forearms'],
+    secondaryMuscles: ['Traps', 'Core', 'Upper back'],
+    feel:
+      'Forearms screaming, traps loaded, core bracing the entire walk. By the end your upper body should feel like it went through a fight.',
+    avoidFeel:
+      'Lower-back hyperextension, shoulders pulled forward, neck strain.',
     setupCues: [
       'Heavy dumbbells or trap bar at your sides. Heavier than you think.',
       'Stand tall — chest up, shoulders pulled back and down.',
       'Brace 360°. Ribs stacked over hips.',
     ],
-    formCues: [
+    formSteps: [
       'Pick the weight up like a deadlift — hinge to grip it.',
       'Stand fully tall before walking.',
       'Take controlled steps. Heel to mid-foot to toe. No shuffling.',
       'Keep ribs DOWN and shoulders pulled back the entire walk.',
-      'Set down with the same hinge pattern. Don\'t drop them.',
+      "Set down with the same hinge pattern. Don't drop them.",
     ],
     commonMistakes: [
-      'Shrugging the weights — let traps load, don\'t actively shrug.',
-      'Leaning forward to compensate for heavy load — go lighter or shorter distance.',
-      'Fast steps — slow and grounded beats fast and sloppy.',
-      'Lumbar hyperextending under load — fix the brace, drop the weight if needed.',
-      'Using straps every set — defeats the grip benefit. Only strap the heaviest set.',
+      'Shrugging the weights actively.',
+      'Leaning forward under heavy load.',
+      'Fast, shuffling steps.',
+      'Lumbar hyperextending under load.',
+      'Using straps on every set.',
     ],
-    whatYouShouldFeel:
-      'Forearms screaming, traps loaded, core bracing the entire walk. By the end you should feel like your upper body went through a fight. This is the most underrated grip + core builder.',
+    corrections: [
+      'Let traps load passively — don\'t shrug. Shoulders stay packed down.',
+      'Drop the weight or shorten the distance. Posture > load.',
+      'Slow grounded steps. Heel-mid-toe pattern. The walk should look like a march, not a jog.',
+      'Re-brace every few steps. Cue "ribs down, glutes squeezed."',
+      'Strap only the heaviest set per session. Carries are a grip lift first.',
+    ],
+    difficultyLevel: 'beginner',
   },
 
   {
     name: 'Dead Hang',
     aliases: ['Bar Hang'],
-    primaryMuscle: 'Grip',
-    secondaryMuscles: ['Lats', 'Shoulders', 'Forearms'],
+    primaryMuscles: ['Grip', 'Forearms'],
+    secondaryMuscles: ['Lats', 'Shoulders'],
+    feel:
+      'Grip burn building over time. Lats stretching gently. Some spinal decompression — feels great after squats and pulls.',
+    avoidFeel:
+      'Sharp shoulder pain, elbow pain. If your shoulders feel pulled out of socket, you\'re fully passive — engage the scaps lightly.',
     setupCues: [
       'Pull-up bar tall enough that your feet clear the ground.',
-      'Step up so you don\'t jump into the position cold.',
+      "Step up so you don't jump into the position cold.",
       'Full grip, thumb wrapped under the bar.',
     ],
-    formCues: [
+    formSteps: [
       'Hang from the bar with arms straight.',
-      'Shoulders mostly relaxed but not fully passive — keep some scap engagement so you\'re not just hanging from connective tissue.',
-      'Breathe normally. Don\'t hold your breath.',
+      "Shoulders mostly relaxed but not fully passive — keep some scap engagement.",
+      "Breathe normally. Don't hold your breath.",
       'Hold for time — start at 20–30 seconds, build over weeks.',
-      'Step down, don\'t drop.',
+      "Step down, don't drop.",
     ],
     commonMistakes: [
-      'Fully passive (totally relaxed shoulders) under heavy bodyweight — can stress shoulder joints.',
-      'Jerking off the bar — step down with control.',
-      'Holding breath — relax and breathe, this is endurance work for your grip.',
-      'Letting your hands slip mid-hang — drop down before you fail.',
+      'Fully passive shoulders under heavy bodyweight.',
+      'Jerking off the bar.',
+      'Holding breath.',
+      'Letting hands slip mid-hang.',
     ],
-    whatYouShouldFeel:
-      'Grip burn building over time. Lats stretching gently. Some spinal decompression — feels great after squats and pulls.',
+    corrections: [
+      'Engage scaps lightly — pull shoulder blades a bit toward your back pockets. Not a full pull-up; just not floppy.',
+      'Step up to mount, step down to dismount. Never drop.',
+      'Slow nasal breathing the whole hang.',
+      'Drop down before you fully fail. Failing on a hang means scraped palms and a tweaked shoulder.',
+    ],
+    difficultyLevel: 'beginner',
   },
 
   {
     name: 'Tricep Pushdown',
     aliases: ['Cable Pushdown', 'Cable Tricep Pushdown', 'Rope Pushdown'],
-    primaryMuscle: 'Triceps',
+    primaryMuscles: ['Triceps'],
     secondaryMuscles: [],
+    feel:
+      'Triceps loading hard at the top of the rep, full burn at lockout. Should be isolated — almost no shoulder or chest involvement.',
+    avoidFeel:
+      'Elbow pain, shoulder strain, lower-back ache from leaning over the bar.',
     setupCues: [
       'Cable at top setting. Rope or straight bar — both work.',
       'Stand close to the stack. Slight forward lean from the hips, not the upper back.',
-      'Elbows pinned at your sides — they don\'t move during the rep.',
+      "Elbows pinned at your sides — they don't move during the rep.",
     ],
-    formCues: [
+    formSteps: [
       'Start with elbows bent 90°, hands at chest height.',
       'Press hands down by extending at the elbow only.',
       'Lock out fully — squeeze the triceps for a 1-count.',
       'Control the negative back to start. No momentum.',
     ],
     commonMistakes: [
-      'Using shoulders to drive the weight down — the elbows should never move forward or back.',
-      'Flaring elbows out — reduces tension on the triceps.',
-      'Half-locking out — you lose the best part of the rep.',
-      'Leaning over the bar to push it — your bodyweight isn\'t the muscle.',
+      'Using shoulders to drive the weight down.',
+      'Flaring elbows out.',
+      'Half-locking out.',
+      'Leaning over the bar to push.',
     ],
-    whatYouShouldFeel:
-      'Triceps loading hard at the top of the rep, full burn at lockout. Should be isolated — almost no shoulder or chest involvement.',
+    corrections: [
+      'Pin elbows to your ribs. If they move forward or back, drop the weight 20%.',
+      'Cue "elbows squeezed against sides" the entire set.',
+      'Lock out fully every rep. Squeeze the triceps for 1 count at the bottom.',
+      'Stand tall, light forward hip-hinge only. Your bodyweight isn\'t the muscle.',
+    ],
+    difficultyLevel: 'beginner',
   },
 
   {
     name: 'Close-Grip Bench',
     aliases: ['Close-Grip Bench Press', 'CGBP', 'Close Grip Bench'],
-    primaryMuscle: 'Triceps',
-    secondaryMuscles: ['Chest (inner)', 'Front delts'],
+    primaryMuscles: ['Triceps'],
+    secondaryMuscles: ['Chest', 'Front delts'],
+    feel:
+      'Triceps doing most of the work, especially at the top half of the press. Some inner chest involvement. Almost no shoulder strain. Fixes a stalling bench lockout.',
+    avoidFeel:
+      'Wrist pain (most common — from going too narrow), shoulder pain, elbow pinching.',
     setupCues: [
       'Same setup as bench press: arched upper back, foot plant, scaps locked down.',
       'Grip just inside shoulder width — wrist still stacked over forearm.',
-      'Don\'t go too narrow — wrist pain isn\'t a feature.',
+      "Don't go too narrow — wrist pain isn't a feature.",
     ],
-    formCues: [
+    formSteps: [
       'Big breath, brace.',
       'Lower the bar to lower chest / sternum, elbows tucked closer to your sides than in regular bench (~30°).',
       'Touch and reverse — no bounce.',
@@ -397,15 +540,43 @@ const LIBRARY: ExerciseEntry[] = [
       'Lock out fully, squeeze the triceps.',
     ],
     commonMistakes: [
-      'Grip too narrow — causes wrist pain and bar instability. Just inside shoulder width is right.',
-      'Flaring elbows — turns it into regular bench with bad mechanics.',
-      'Touching too high (clavicle) — wrong line for triceps.',
-      'Using bench-press weight — close-grip is naturally lighter. Drop ~15–20%.',
+      'Grip too narrow (wrist pain).',
+      'Flaring elbows.',
+      'Touching too high (clavicle).',
+      'Using bench-press weight.',
     ],
-    whatYouShouldFeel:
-      'Triceps doing most of the work, especially at the top half of the press. Some inner chest involvement. Almost no shoulder strain. This is the lift that fixes a stalling bench lockout.',
+    corrections: [
+      'Move grip 1-2 inches wider. Pinky on the smooth ring or just inside is the right distance for most lifters.',
+      'Cue "elbows tucked at 30°." Tighter than regular bench, not wider.',
+      'Touch lower chest / sternum. Cue: "bar to my lower ribs."',
+      'Drop weight 15-20% from your bench number. Close-grip is naturally lighter — chasing matched weight kills the lift.',
+    ],
+    difficultyLevel: 'intermediate',
   },
 ];
+
+// ─── Coaching helpers ────────────────────────────────────────────────────────
+
+const JOINT_KEYWORDS = [
+  'lower back',
+  'low back',
+  'lumbar',
+  'knee',
+  'shoulder',
+  'rotator',
+  'wrist',
+  'elbow',
+  'neck',
+] as const;
+
+/**
+ * Returns true when the entry's `avoidFeel` mentions a joint — used by the UI
+ * to render a warning badge ("Stop if you feel pain outside target muscles").
+ */
+export function hasJointWarning(entry: ExerciseEntry): boolean {
+  const text = entry.avoidFeel.toLowerCase();
+  return JOINT_KEYWORDS.some((k) => text.includes(k));
+}
 
 // ─── Lookup ──────────────────────────────────────────────────────────────────
 
