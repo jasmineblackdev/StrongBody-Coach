@@ -6,10 +6,10 @@ export const sampleProfile: Profile = {
   sex: 'female',
   age: 30,
   heightInches: 62,
-  weightLbs: 168,
-  goalWeightLbs: 145,
+  weightLbs: 227,
+  goalWeightLbs: 165,
   trainingDaysPerWeek: 4,
-  goal: 'recomp',
+  goal: 'fat_loss',
   squat1RM: 185,
   bench1RM: 105,
   deadlift1RM: 235,
@@ -19,7 +19,7 @@ export const sampleProfile: Profile = {
   mealCount: 4,
   cardioPref: 'low',
   onWegovy: true,
-  proteinTargetG: 150,
+  proteinTargetG: 200,
   createdAt: new Date().toISOString(),
 };
 
@@ -30,12 +30,24 @@ const daysAgo = (n: number) => {
   return d.toISOString().slice(0, 10);
 };
 
+// 14 days of weight data so the weight-trend engine has 7-day rolling avg AND
+// prior 7-day window to compare against. Loosely simulates the start of a
+// fat-loss block trending down ~1.2 lb/wk from 227.
 export const sampleMetrics: BodyMetric[] = [
-  { date: daysAgo(28), weightLbs: 174, waistIn: 33.5 },
-  { date: daysAgo(21), weightLbs: 172, waistIn: 33.0 },
-  { date: daysAgo(14), weightLbs: 170, waistIn: 32.5 },
-  { date: daysAgo(7), weightLbs: 169, waistIn: 32.25 },
-  { date: daysAgo(1), weightLbs: 168, waistIn: 32.0 },
+  { date: daysAgo(14), weightLbs: 229.0, waistIn: 41.5 },
+  { date: daysAgo(13), weightLbs: 228.8 },
+  { date: daysAgo(12), weightLbs: 228.4 },
+  { date: daysAgo(11), weightLbs: 228.6 },
+  { date: daysAgo(10), weightLbs: 228.2 },
+  { date: daysAgo(9), weightLbs: 228.0 },
+  { date: daysAgo(8), weightLbs: 227.9, waistIn: 41.25 },
+  { date: daysAgo(7), weightLbs: 227.5 },
+  { date: daysAgo(6), weightLbs: 227.6 },
+  { date: daysAgo(5), weightLbs: 227.2 },
+  { date: daysAgo(4), weightLbs: 227.0 },
+  { date: daysAgo(3), weightLbs: 227.3 },
+  { date: daysAgo(2), weightLbs: 226.8 },
+  { date: daysAgo(1), weightLbs: 227.0, waistIn: 41.0 },
 ];
 
 export const sampleLogs: WorkoutLog[] = [

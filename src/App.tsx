@@ -7,6 +7,7 @@ import WorkoutPlanPage from './pages/WorkoutPlan';
 import WorkoutLoggerPage from './pages/WorkoutLogger';
 import MealsPage from './pages/Meals';
 import ProgressPage from './pages/Progress';
+import CheckInPage from './pages/CheckIn';
 import { store } from './lib/storage';
 import { sampleLogs, sampleMetrics, sampleProfile } from './lib/sampleData';
 import { buildWeeklyPlan } from './lib/workoutPlan';
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="log" element={<WorkoutLoggerPage />} />
         <Route path="meals" element={<MealsPage />} />
         <Route path="progress" element={<ProgressPage />} />
+        <Route path="check-in" element={<CheckInPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

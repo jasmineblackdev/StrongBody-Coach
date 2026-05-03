@@ -9,6 +9,7 @@ import {
   Flame,
   Menu,
   X,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,6 +18,7 @@ const NAV = [
   { to: '/profile', label: 'Profile', icon: User2 },
   { to: '/plan', label: 'Workout Plan', icon: Dumbbell },
   { to: '/log', label: 'Log Workout', icon: ClipboardList },
+  { to: '/check-in', label: 'Weekly Check-In', icon: ClipboardCheck },
   { to: '/meals', label: 'Meals', icon: Salad },
   { to: '/progress', label: 'Progress', icon: LineChart },
 ];

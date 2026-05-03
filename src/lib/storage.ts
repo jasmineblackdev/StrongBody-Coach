@@ -2,6 +2,7 @@ import type {
   BodyMetric,
   PlanProposal,
   Profile,
+  WeeklyCheckIn,
   WorkoutLog,
   WeeklyPlan,
 } from '../types';
@@ -13,6 +14,7 @@ const KEYS = {
   plan: 'sbc:weeklyPlan',
   weekNumber: 'sbc:weekNumber',
   proposal: 'sbc:planProposal',
+  checkIns: 'sbc:checkIns',
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -113,6 +115,18 @@ export const store = {
   },
   clearProposal: () => {
     localStorage.removeItem(KEYS.proposal);
+    emit();
+  },
+
+  getCheckIns: (): WeeklyCheckIn[] => read<WeeklyCheckIn[]>(KEYS.checkIns, []),
+  addCheckIn: (c: WeeklyCheckIn) => {
+    const all = store.getCheckIns();
+    all.unshift(c);
+    write(KEYS.checkIns, all);
+    emit();
+  },
+  setCheckIns: (cs: WeeklyCheckIn[]) => {
+    write(KEYS.checkIns, cs);
     emit();
   },
 

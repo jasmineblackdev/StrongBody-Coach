@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Dumbbell, Trophy, HeartPulse, Salad, Target, TrendingUp, TrendingDown, Minus, HelpCircle } from 'lucide-react';
+import { Flame, Dumbbell, Trophy, HeartPulse, Salad, Target, TrendingUp, TrendingDown, Minus, HelpCircle, Sparkles } from 'lucide-react';
 import { Card, CoachMessage, ProgressBar, SectionHeader, StatCard, Pill } from '../components/ui';
 import { BodyWeightChart, MacroDoughnut } from '../components/charts';
 import { useStoreVersion } from '../hooks/useStore';
 import { computeReadiness, READINESS_TONE, SUGGESTION_COPY } from '../lib/recoveryEngine';
 import { estimateAllLifts, TREND_LABEL, type StrengthTrend } from '../lib/strengthEngine';
+import { computeWeightTrend } from '../lib/weightTrendEngine';
+import { analyzeFatLoss, recommendationTone } from '../lib/fatLossEngine';
 import { store } from '../lib/storage';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { buildDailyPlan } from '../lib/mealPlan';
@@ -52,15 +54,28 @@ export default function Dashboard() {
       }),
     [logs, profile?.squat1RM, profile?.bench1RM, profile?.deadlift1RM],
   );
+  const weightTrend = useMemo(
+    () => (profile ? computeWeightTrend(metrics, profile) : null),
+    [metrics, profile],
+  );
+  const fatLoss = useMemo(
+    () =>
+      profile
+        ? analyzeFatLoss({
+            profile,
+            metrics,
+            logs,
+            checkIns: store.getCheckIns(),
+          })
+        : null,
+    [profile, metrics, logs],
+  );
 
-  if (!profile || !plan) return null;
+  if (!profile || !plan || !weightTrend || !fatLoss) return null;
 
   const sortedMetrics = [...metrics].sort((a, b) => a.date.localeCompare(b.date));
-  // Profile is the source of truth for "current" body weight.
-  // Metrics drive the trend chart and history.
-  const lastWeight = profile.weightLbs;
-  const firstWeight = sortedMetrics[0]?.weightLbs ?? profile.weightLbs;
-  const weightDelta = +(lastWeight - firstWeight).toFixed(1);
+  // Profile + weightTrendEngine drive the headline weight values now.
+  // sortedMetrics is kept for the body weight trend chart.
 
   const weeklyTarget = profile.trainingDaysPerWeek;
   const thisWeekStart = new Date();
@@ -83,8 +98,6 @@ export default function Dashboard() {
     recentLogs: logs,
   });
 
-  const goalLeft = +(lastWeight - profile.goalWeightLbs).toFixed(1);
-
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -101,23 +114,103 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Coach hero — readiness drives this when score is meaningful, else falls back to weak points */}
+      {/* Goal banner — the headline of fat-loss progress */}
+      <Card className="border-accent/20">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-zinc-400">
+              Goal · {profile.weightLbs} lb → {profile.goalWeightLbs} lb
+            </div>
+            <div className="mt-1 flex items-baseline gap-3">
+              <span className="font-display text-3xl font-semibold tracking-tight">
+                {weightTrend.sevenDayAvg.toFixed(1)}
+              </span>
+              <span className="text-sm text-zinc-400">7-day avg lb</span>
+              {weightTrend.weeklyChange !== 0 && (
+                <span
+                  className={`text-sm font-semibold ${
+                    weightTrend.weeklyChange < 0 ? 'text-success' : 'text-warning'
+                  }`}
+                >
+                  {weightTrend.weeklyChange > 0 ? '+' : ''}
+                  {weightTrend.weeklyChange.toFixed(1)} lb / wk
+                </span>
+              )}
+            </div>
+            <div className="mt-2 text-xs text-zinc-400">
+              {weightTrend.totalLostFromStart > 0
+                ? `${weightTrend.totalLostFromStart.toFixed(1)} lb lost · `
+                : ''}
+              {weightTrend.remaining > 0
+                ? `${weightTrend.remaining.toFixed(1)} lb to goal`
+                : 'at goal weight'}
+              {weightTrend.weeksToGoal != null && (
+                <>
+                  {' '}
+                  · ETA <span className="text-zinc-200">{weightTrend.weeksToGoal} weeks</span>
+                  {weightTrend.goalDate ? ` (~${weightTrend.goalDate})` : ''}
+                </>
+              )}
+            </div>
+          </div>
+          <div className="min-w-[180px] flex-1">
+            <ProgressBar
+              value={Math.max(0, weightTrend.totalLostFromStart)}
+              max={Math.max(
+                1,
+                profile.weightLbs - profile.goalWeightLbs +
+                  Math.max(0, weightTrend.totalLostFromStart),
+              )}
+              tone="success"
+              label="Progress"
+              rightLabel={`${weightTrend.totalLostFromStart.toFixed(1)} / ${(
+                profile.weightLbs - profile.goalWeightLbs +
+                Math.max(0, weightTrend.totalLostFromStart)
+              ).toFixed(1)} lb`}
+            />
+            <div className="mt-2">
+              <Link to="/check-in" className="btn-outline w-full">
+                <Sparkles size={14} /> Run weekly check-in
+              </Link>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Coach recommendation — fat-loss engine primary */}
       <CoachMessage
-        tone={
-          readiness.suggestion === 'deload' || readiness.suggestion === 'reduce'
-            ? 'warning'
-            : weakPoints[0]
-            ? 'accent'
-            : 'success'
-        }
-        title={`Today's coaching read · ${SUGGESTION_COPY[readiness.suggestion].headline}`}
+        tone={recommendationTone(fatLoss.primary.kind)}
+        title={`Coach says: ${fatLoss.primary.headline}`}
       >
-        {readiness.metrics.sessionsAnalyzed >= 2 && readiness.suggestion !== 'push'
-          ? `${SUGGESTION_COPY[readiness.suggestion].body} ${readiness.reasons[0] ?? ''}`
-          : weakPoints[0]
-          ? `${weakPoints[0].title}. ${weakPoints[0].recommendation}`
-          : 'Strong week so far. Keep RPE honest, hit your protein, and walk after dinner — Wegovy + walks is the cheat code for bloat.'}
+        {fatLoss.primary.body}
+        {fatLoss.daysSinceLastCheckIn != null && (
+          <div className="mt-2 text-xs opacity-80">
+            Last check-in {fatLoss.daysSinceLastCheckIn} day
+            {fatLoss.daysSinceLastCheckIn === 1 ? '' : 's'} ago
+            {fatLoss.shouldRunNow ? ' — due for a fresh one.' : '.'}
+          </div>
+        )}
       </CoachMessage>
+
+      {/* Readiness / weak-point secondary read */}
+      {(readiness.suggestion === 'deload' ||
+        readiness.suggestion === 'reduce' ||
+        weakPoints[0]) && (
+        <CoachMessage
+          tone={
+            readiness.suggestion === 'deload' || readiness.suggestion === 'reduce'
+              ? 'warning'
+              : 'accent'
+          }
+          title={`Training read · ${SUGGESTION_COPY[readiness.suggestion].headline}`}
+        >
+          {readiness.metrics.sessionsAnalyzed >= 2 && readiness.suggestion !== 'push'
+            ? `${SUGGESTION_COPY[readiness.suggestion].body} ${readiness.reasons[0] ?? ''}`
+            : weakPoints[0]
+            ? `${weakPoints[0].title}. ${weakPoints[0].recommendation}`
+            : ''}
+        </CoachMessage>
+      )}
 
       {(() => {
         const pending = store.getProposal();
@@ -135,17 +228,24 @@ export default function Dashboard() {
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard
-          label="Body weight"
-          value={lastWeight.toFixed(1)}
+          label="7-day avg"
+          value={weightTrend.sevenDayAvg.toFixed(1)}
           unit="lb"
-          delta={{ value: weightDelta, positiveIsGood: false }}
-          hint={`goal ${profile.goalWeightLbs} lb`}
+          delta={{
+            value: +weightTrend.weeklyChange.toFixed(1),
+            positiveIsGood: false,
+          }}
+          hint={`current ${weightTrend.current.toFixed(1)} lb`}
         />
         <StatCard
           label="To goal"
-          value={goalLeft > 0 ? goalLeft.toFixed(1) : '0'}
+          value={weightTrend.remaining > 0 ? weightTrend.remaining.toFixed(1) : '0'}
           unit="lb"
-          hint="weekly target: −1 lb"
+          hint={
+            weightTrend.weeksToGoal != null
+              ? `~${weightTrend.weeksToGoal} weeks`
+              : 'log daily for ETA'
+          }
         />
         <StatCard
           label="Compliance"

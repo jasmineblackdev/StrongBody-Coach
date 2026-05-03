@@ -160,8 +160,19 @@ export function computeMacroTargets(input: MacroInput): MacroTargets {
     );
   }
 
-  // Floor for a 5'2" lifter
-  calories = Math.max(1450, Math.round(calories / 10) * 10);
+  // Bodyweight-aware floor: never crash-diet. Floor scales with bodyweight so
+  // a 220-lb lifter doesn't get prescribed 1450 kcal. The hard minimum is
+  // 1500 kcal and we never go below ~85% of BMR.
+  const bmrFloor = Math.round(bmrFemale(profile) * 0.85);
+  const weightFloor = Math.round(profile.weightLbs * 8);
+  const hardFloor = Math.max(1500, weightFloor, bmrFloor);
+  if (calories < hardFloor) {
+    notes.push(
+      `Hard floor at ${hardFloor} kcal — never crash diet. Recovery and muscle need fuel.`,
+    );
+    calories = hardFloor;
+  }
+  calories = Math.round(calories / 10) * 10;
 
   // ─── Macros ────────────────────────────────────────────────────────────
   const proteinG = Math.max(profile.proteinTargetG ?? 0, Math.round(profile.weightLbs * 0.9));

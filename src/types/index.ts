@@ -189,3 +189,23 @@ export interface PlanProposal {
   // ids of source workout logs used to build the proposal — for staleness check
   sourceLogIds: string[];
 }
+
+export type AdherenceLevel = 'yes' | 'mostly' | 'no';
+
+export interface WeeklyCheckIn {
+  id: string;
+  /** ISO date string (YYYY-MM-DD or full ISO). */
+  date: string;
+  /** 7-day average weight you logged this week (lb). */
+  weightAvg7d?: number;
+  caloriesAdherence: AdherenceLevel;
+  proteinAdherence: AdherenceLevel;
+  workoutsCompleted: number;
+  workoutsPlanned: number;
+  hungerLevel: number; // 1–10
+  bloatingLevel: number; // 1–10
+  bowelNotes: string;
+  energyRecovery: number; // 1–10
+  whatWorked: string;
+  whatNeedsAdjustment: string;
+}
