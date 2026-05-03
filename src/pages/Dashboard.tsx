@@ -8,6 +8,10 @@ import { computeReadiness, READINESS_TONE, SUGGESTION_COPY } from '../lib/recove
 import { estimateAllLifts, TREND_LABEL, type StrengthTrend } from '../lib/strengthEngine';
 import { computeWeightTrend } from '../lib/weightTrendEngine';
 import { analyzeFatLoss, recommendationTone } from '../lib/fatLossEngine';
+import { generateCoachSummary } from '../lib/ai/coachSummary';
+import { forecastWeight } from '../lib/ml/weightForecaster';
+import { forecastAllLifts } from '../lib/ml/strengthForecaster';
+import { assessInjuryRisk, RISK_TONE } from '../lib/ml/injuryRisk';
 import { store } from '../lib/storage';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { buildDailyPlan } from '../lib/mealPlan';
@@ -70,8 +74,25 @@ export default function Dashboard() {
         : null,
     [profile, metrics, logs],
   );
+  const coachSummary = useMemo(
+    () =>
+      profile && weightTrend && fatLoss
+        ? generateCoachSummary({
+            profile,
+            weight: weightTrend,
+            recovery: readiness,
+            lifts: liftEstimates,
+            fatLoss,
+            lastCheckIn: store.getCheckIns()[0],
+          })
+        : null,
+    [profile, weightTrend, readiness, liftEstimates, fatLoss],
+  );
+  const weightForecast = useMemo(() => forecastWeight(metrics), [metrics]);
+  const liftForecasts = useMemo(() => forecastAllLifts(logs), [logs]);
+  const injuryRisk = useMemo(() => assessInjuryRisk(logs), [logs]);
 
-  if (!profile || !plan || !weightTrend || !fatLoss) return null;
+  if (!profile || !plan || !weightTrend || !fatLoss || !coachSummary) return null;
 
   const sortedMetrics = [...metrics].sort((a, b) => a.date.localeCompare(b.date));
   // Profile + weightTrendEngine drive the headline weight values now.
@@ -177,12 +198,13 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* Coach recommendation — fat-loss engine primary */}
-      <CoachMessage
-        tone={recommendationTone(fatLoss.primary.kind)}
-        title={`Coach says: ${fatLoss.primary.headline}`}
-      >
-        {fatLoss.primary.body}
+      {/* AI coach summary — weekly read in 3–5 sentences */}
+      <CoachMessage tone={coachSummary.tone} title="Coach's read this week">
+        <div className="space-y-1.5">
+          {coachSummary.sentences.map((s, i) => (
+            <p key={i}>{s}</p>
+          ))}
+        </div>
         {fatLoss.daysSinceLastCheckIn != null && (
           <div className="mt-2 text-xs opacity-80">
             Last check-in {fatLoss.daysSinceLastCheckIn} day
@@ -192,25 +214,108 @@ export default function Dashboard() {
         )}
       </CoachMessage>
 
-      {/* Readiness / weak-point secondary read */}
-      {(readiness.suggestion === 'deload' ||
-        readiness.suggestion === 'reduce' ||
-        weakPoints[0]) && (
-        <CoachMessage
-          tone={
-            readiness.suggestion === 'deload' || readiness.suggestion === 'reduce'
-              ? 'warning'
-              : 'accent'
+      {/* Predictions card — ML-lite forecasts */}
+      <Card>
+        <SectionHeader
+          title="Predictions"
+          subtitle="ML-lite forecasts from your last 4–6 weeks of data"
+          action={
+            injuryRisk.level !== 'low' && (
+              <Pill tone={RISK_TONE[injuryRisk.level]}>
+                injury risk: {injuryRisk.level}
+              </Pill>
+            )
           }
-          title={`Training read · ${SUGGESTION_COPY[readiness.suggestion].headline}`}
-        >
-          {readiness.metrics.sessionsAnalyzed >= 2 && readiness.suggestion !== 'push'
-            ? `${SUGGESTION_COPY[readiness.suggestion].body} ${readiness.reasons[0] ?? ''}`
-            : weakPoints[0]
-            ? `${weakPoints[0].title}. ${weakPoints[0].recommendation}`
-            : ''}
-        </CoachMessage>
-      )}
+        />
+        <div className="grid gap-3 md:grid-cols-2">
+          {/* Weight forecast */}
+          <div className="rounded-xl border border-ink-800 bg-ink-850 p-4">
+            <div className="text-xs uppercase tracking-wider text-zinc-400">
+              Next-week weight
+            </div>
+            {weightForecast ? (
+              <>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="font-display text-2xl font-semibold">
+                    {weightForecast.predictedNextWeekWeight} lb
+                  </span>
+                  <span
+                    className={`text-sm font-semibold ${
+                      weightForecast.predictedWeeklyChange < 0
+                        ? 'text-success'
+                        : weightForecast.predictedWeeklyChange > 0
+                        ? 'text-warning'
+                        : 'text-zinc-400'
+                    }`}
+                  >
+                    {weightForecast.predictedWeeklyChange > 0 ? '+' : ''}
+                    {weightForecast.predictedWeeklyChange.toFixed(1)} lb
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-zinc-400">
+                  range {weightForecast.band.low}–{weightForecast.band.high} lb · R²{' '}
+                  {weightForecast.rSquared} · {weightForecast.confidence} confidence
+                </div>
+              </>
+            ) : (
+              <div className="mt-2 text-sm text-zinc-400">
+                Need 7+ days of weight data to forecast.
+              </div>
+            )}
+          </div>
+
+          {/* Big 3 next-session targets */}
+          <div className="rounded-xl border border-ink-800 bg-ink-850 p-4">
+            <div className="text-xs uppercase tracking-wider text-zinc-400">
+              Next-session working sets (5 reps)
+            </div>
+            <div className="mt-2 space-y-1.5 text-sm">
+              {(['squat', 'bench', 'deadlift'] as const).map((lift) => {
+                const f = liftForecasts[lift];
+                return (
+                  <div key={lift} className="flex items-center justify-between">
+                    <span className="capitalize text-zinc-300">{lift}</span>
+                    {f ? (
+                      <span className="text-zinc-100">
+                        <span className="font-semibold">{f.nextSessionTarget} lb</span>
+                        <span className="ml-1 text-xs text-zinc-500">
+                          (±{(f.confidenceBand.high - f.nextSessionTarget)} lb)
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-xs text-zinc-500">—</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {injuryRisk.level !== 'low' && (
+          <div className="mt-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-zinc-100">
+            <div className="font-semibold">Injury risk: {injuryRisk.level}</div>
+            <div className="mt-1 text-xs text-zinc-300">
+              {injuryRisk.recommendation}
+            </div>
+            {injuryRisk.flags.length > 0 && (
+              <ul className="mt-1.5 list-disc pl-4 text-xs text-zinc-400">
+                {injuryRisk.flags.slice(0, 3).map((f, i) => (
+                  <li key={i}>{f}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {/* Specific fat-loss action card kept as a focused secondary read */}
+      <CoachMessage
+        tone={recommendationTone(fatLoss.primary.kind)}
+        title={`This week: ${fatLoss.primary.headline}`}
+      >
+        {fatLoss.primary.body}
+      </CoachMessage>
 
       {(() => {
         const pending = store.getProposal();

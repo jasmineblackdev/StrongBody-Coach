@@ -4,6 +4,7 @@ import { Card, CoachMessage, Pill, ProgressBar, SectionHeader } from '../compone
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import { buildDailyPlan } from '../lib/mealPlan';
+import { generateMealNarrative } from '../lib/ai/mealAi';
 
 export default function MealsPage() {
   useStoreVersion();
@@ -70,7 +71,12 @@ export default function MealsPage() {
         </div>
       </Card>
 
-      <CoachMessage>{plan.coachNote}</CoachMessage>
+      <CoachMessage title="Today's plan">
+        <p className="font-semibold text-white">
+          {generateMealNarrative(plan, profile, isTrainingDay)}
+        </p>
+        <p className="mt-2 text-sm">{plan.coachNote}</p>
+      </CoachMessage>
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-1">

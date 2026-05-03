@@ -8,6 +8,8 @@ import { useStoreVersion } from '../hooks/useStore';
 import { applyChanges, generateProposal } from '../lib/applyAdjustments';
 import { buildWeeklyPlan, dayLabel } from '../lib/workoutPlan';
 import { findExercise } from '../lib/exerciseLibrary';
+import { forecastAllLifts } from '../lib/ml/strengthForecaster';
+import { assessInjuryRisk, RISK_TONE } from '../lib/ml/injuryRisk';
 import type { PlanProposal, TrainingPhase, WorkoutSession } from '../types';
 
 const PHASES: TrainingPhase[] = ['hypertrophy', 'strength', 'peak', 'deload'];
@@ -15,6 +17,9 @@ const PHASES: TrainingPhase[] = ['hypertrophy', 'strength', 'peak', 'deload'];
 export default function WorkoutPlanPage() {
   useStoreVersion();
   const profile = store.getProfile()!;
+  const logs = store.getLogs();
+  const liftForecasts = useMemo(() => forecastAllLifts(logs), [logs]);
+  const injuryRisk = useMemo(() => assessInjuryRisk(logs), [logs]);
   const [weekNumber, setWeekNumber] = useState(store.getWeekNumber());
   const [phase, setPhase] = useState<TrainingPhase>(store.getPlan()?.phase ?? 'hypertrophy');
   const [planVersion, setPlanVersion] = useState(0);
@@ -123,6 +128,11 @@ export default function WorkoutPlanPage() {
         <div className="flex flex-wrap gap-2">
           <Pill tone="accent">Week {weekNumber}</Pill>
           <Pill>Phase: {phase}</Pill>
+          {injuryRisk.level !== 'low' && (
+            <Pill tone={RISK_TONE[injuryRisk.level]}>
+              risk: {injuryRisk.level}
+            </Pill>
+          )}
           <button onClick={generateCoachPreview} className="btn-outline">
             <Sparkles size={16} /> Generate coach preview
           </button>
@@ -131,6 +141,19 @@ export default function WorkoutPlanPage() {
           </button>
         </div>
       </header>
+
+      {injuryRisk.level === 'high' && (
+        <CoachMessage tone="danger" title={`Injury risk: ${injuryRisk.level}`}>
+          {injuryRisk.recommendation}
+          {injuryRisk.flags.length > 0 && (
+            <ul className="mt-2 list-disc pl-5 text-xs opacity-90">
+              {injuryRisk.flags.slice(0, 3).map((f, i) => (
+                <li key={i}>{f}</li>
+              ))}
+            </ul>
+          )}
+        </CoachMessage>
+      )}
 
       {previewMessage && !proposal && (
         <div className="rounded-2xl border border-ink-700 bg-ink-850 p-4">
@@ -219,6 +242,7 @@ export default function WorkoutPlanPage() {
             open={openId === s.id}
             onToggle={() => setOpenId(openId === s.id ? null : s.id)}
             onSelectExercise={setActiveExercise}
+            forecasts={liftForecasts}
           />
         ))}
       </div>
@@ -238,12 +262,21 @@ function SessionRow({
   open,
   onToggle,
   onSelectExercise,
+  forecasts,
 }: {
   session: WorkoutSession;
   open: boolean;
   onToggle: () => void;
   onSelectExercise: (name: string) => void;
+  forecasts: ReturnType<typeof forecastAllLifts>;
 }) {
+  // Map main-lift prescriptions to their forecast
+  function forecastFor(name: string): ReturnType<typeof forecastAllLifts>[keyof ReturnType<typeof forecastAllLifts>] | null {
+    if (/back\s*squat|^squat$/i.test(name)) return forecasts.squat;
+    if (/bench\s*press|^bench$/i.test(name)) return forecasts.bench;
+    if (/conventional\s*deadlift|^deadlift$/i.test(name)) return forecasts.deadlift;
+    return null;
+  }
   return (
     <div className="card overflow-hidden">
       <button onClick={onToggle} className="flex w-full items-center justify-between text-left">
@@ -261,6 +294,7 @@ function SessionRow({
         <div className="mt-4 space-y-2">
           {session.prescriptions.map((p, i) => {
             const hasDetails = Boolean(findExercise(p.name));
+            const forecast = forecastFor(p.name);
             return (
               <button
                 key={i}
@@ -274,6 +308,11 @@ function SessionRow({
                     <span className="font-semibold text-zinc-100">{p.name}</span>
                     {hasDetails && (
                       <Info size={12} className="shrink-0 text-rose-glow opacity-80" />
+                    )}
+                    {forecast && (
+                      <span className="text-[10px] uppercase tracking-wide text-rose-glow">
+                        · predicted {forecast.nextSessionTarget} lb
+                      </span>
                     )}
                   </div>
                   {p.tags?.length ? (
