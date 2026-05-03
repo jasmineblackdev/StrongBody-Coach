@@ -89,11 +89,33 @@ export default function ProfilePage() {
         Be honest about pain and food sensitivities — those make the biggest difference.
       </CoachMessage>
 
-      <CloudPanel />
-
       <ExportImportPanel />
 
-      <TestDataPanel />
+      {/* Cloud sync — collapsed by default; opt-in once, then forget. */}
+      <details className="card group">
+        <summary className="flex cursor-pointer items-center justify-between gap-3 list-none">
+          <div>
+            <div className="h2 text-base">Advanced · Cloud sync</div>
+            <div className="muted text-xs mt-0.5">
+              Optional. Sign in once to back up your data across devices via Supabase. Most users
+              don't need this — Export / Import above covers backups offline.
+            </div>
+          </div>
+          <span className="shrink-0 rounded-lg border border-ink-700 px-2 py-1 text-xs text-zinc-300 group-open:hidden">
+            Show
+          </span>
+          <span className="hidden shrink-0 rounded-lg border border-ink-700 px-2 py-1 text-xs text-zinc-300 group-open:inline">
+            Hide
+          </span>
+        </summary>
+        <div className="mt-4">
+          <CloudPanel />
+        </div>
+      </details>
+
+      {/* TestDataPanel: dev-only — gated by import.meta.env.DEV so it's
+          stripped from production builds entirely. */}
+      {import.meta.env.DEV && <TestDataPanel />}
 
       <OneRMSuggestionPanel />
 

@@ -95,8 +95,11 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
         </header>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-          {/* Video placeholder */}
-          <VideoBlock url={entry?.videoUrl} imageUrl={entry?.imageUrl} />
+          {/* Video — only when an actual URL is set; we don't show a "coming
+              soon" placeholder anymore. */}
+          {entry?.videoUrl && (
+            <VideoBlock url={entry.videoUrl} imageUrl={entry.imageUrl} />
+          )}
 
           {!entry ? (
             <div className="rounded-xl border border-ink-800 bg-ink-850 p-4 text-sm text-zinc-300">
@@ -156,21 +159,11 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
                 </div>
               </Section>
 
-              <Section title="Setup" icon={<Wrench size={14} />}>
-                <ul className="space-y-1.5 text-sm text-zinc-200">
-                  {entry.setupCues.map((c, i) => (
-                    <li key={i} className="flex gap-2">
-                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-rose-glow" />
-                      <span>{c}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
-
+              {/* Form steps stay expanded — the active reference during a set. */}
               <Section title="Form (step by step)" icon={<ListOrdered size={14} />}>
-                <ol className="space-y-2 text-sm text-zinc-200">
+                <ol className="space-y-1.5 text-sm text-zinc-200">
                   {entry.formSteps.map((c, i) => (
-                    <li key={i} className="flex gap-3">
+                    <li key={i} className="flex gap-2.5">
                       <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[11px] font-semibold text-rose-glow">
                         {i + 1}
                       </span>
@@ -180,24 +173,53 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
                 </ol>
               </Section>
 
-              <Section title="Mistakes & quick fixes" icon={<AlertTriangle size={14} />} tone="warning">
-                <ul className="space-y-3 text-sm text-zinc-200">
+              {/* Setup — collapsed by default. Mostly prep cues; not needed
+                  mid-set. */}
+              <CollapsibleSection
+                title="Setup"
+                icon={<Wrench size={14} />}
+                count={entry.setupCues.length}
+              >
+                <ul className="space-y-1.5 text-sm text-zinc-200">
+                  {entry.setupCues.map((c, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-rose-glow" />
+                      <span>{c}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CollapsibleSection>
+
+              {/* Mistakes — collapsed by default. Reach for it only when
+                  something feels off. */}
+              <CollapsibleSection
+                title="Mistakes & quick fixes"
+                icon={<AlertTriangle size={14} />}
+                tone="warning"
+                count={entry.commonMistakes.length}
+              >
+                <ul className="space-y-2 text-sm text-zinc-200">
                   {entry.commonMistakes.map((m, i) => (
                     <li key={i} className="rounded-xl border border-ink-800 bg-ink-850 p-3">
                       <div className="flex items-start gap-2">
-                        <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warning" />
+                        <AlertTriangle
+                          size={14}
+                          className="mt-0.5 shrink-0 text-warning"
+                        />
                         <div className="font-semibold text-zinc-100">{m}</div>
                       </div>
                       {entry.corrections[i] && (
                         <div className="mt-1.5 flex items-start gap-2 pl-6">
                           <Wand2 size={12} className="mt-1 shrink-0 text-success" />
-                          <span className="text-xs text-zinc-300">{entry.corrections[i]}</span>
+                          <span className="text-xs text-zinc-300">
+                            {entry.corrections[i]}
+                          </span>
                         </div>
                       )}
                     </li>
                   ))}
                 </ul>
-              </Section>
+              </CollapsibleSection>
             </>
           )}
         </div>
@@ -236,37 +258,74 @@ function Section({
   );
 }
 
-function VideoBlock({ url, imageUrl }: { url?: string; imageUrl?: string }) {
-  if (url) {
-    return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        className="group block aspect-[16/7] w-full overflow-hidden rounded-xl border border-ink-800 bg-ink-850"
-      >
-        <div className="relative flex h-full w-full items-center justify-center">
-          {imageUrl ? (
-            <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80 group-hover:opacity-100" />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-ink-800 to-ink-900" />
-          )}
-          <div className="relative z-10 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white shadow-glow">
-            <PlayCircle size={16} /> Watch demo
-          </div>
-        </div>
-      </a>
-    );
-  }
-
-  // Compact placeholder when no video is set — keeps the coaching content
-  // as the headline of the modal.
+/**
+ * Collapsed-by-default section, native <details>. Click the summary row to
+ * expand. Used for sections that are nice to have but not essential during
+ * a working set.
+ */
+function CollapsibleSection({
+  title,
+  icon,
+  tone = 'default',
+  count,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  tone?: 'default' | 'warning' | 'accent';
+  count?: number;
+  children: React.ReactNode;
+}) {
+  const headerClass =
+    tone === 'warning'
+      ? 'text-warning'
+      : tone === 'accent'
+      ? 'text-rose-glow'
+      : 'text-zinc-300';
   return (
-    <div className="flex h-20 w-full items-center justify-center rounded-xl border border-dashed border-ink-700 bg-ink-850 text-zinc-500">
-      <div className="flex items-center gap-2 text-xs">
-        <PlayCircle size={16} className="text-zinc-600" />
-        <span>Video demo coming soon</span>
+    <details className="group rounded-xl border border-ink-800 bg-ink-900/40 px-3 py-2.5 transition open:bg-ink-900/60">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+        <span
+          className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider ${headerClass}`}
+        >
+          {icon}
+          {title}
+          {typeof count === 'number' && (
+            <span className="text-[10px] font-normal normal-case text-zinc-500">
+              ({count})
+            </span>
+          )}
+        </span>
+        <span className="text-xs text-zinc-500 group-open:hidden">Show</span>
+        <span className="hidden text-xs text-zinc-500 group-open:inline">Hide</span>
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
+  );
+}
+
+function VideoBlock({ url, imageUrl }: { url: string; imageUrl?: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="group block aspect-[16/7] w-full overflow-hidden rounded-xl border border-ink-800 bg-ink-850"
+    >
+      <div className="relative flex h-full w-full items-center justify-center">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-80 group-hover:opacity-100"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-ink-800 to-ink-900" />
+        )}
+        <div className="relative z-10 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white shadow-glow">
+          <PlayCircle size={16} /> Watch demo
+        </div>
       </div>
-    </div>
+    </a>
   );
 }
