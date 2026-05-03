@@ -95,11 +95,16 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
         </header>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-          {/* Video — only when an actual URL is set; we don't show a "coming
-              soon" placeholder anymore. */}
-          {entry?.videoUrl && (
-            <VideoBlock url={entry.videoUrl} imageUrl={entry.imageUrl} />
-          )}
+          {/* Video — always available. We don't ship a YouTube/wger API
+              integration; instead the button opens a YouTube search for
+              "<exercise> proper form" in a new tab. Works in the gym on
+              mobile, no key, no rate limit, no extra cost. If a curated
+              videoUrl is ever added to an entry, that wins. */}
+          <VideoBlock
+            url={entry?.videoUrl ?? buildYouTubeSearchUrl(entry?.name ?? exerciseName)}
+            label={entry?.videoUrl ? 'Watch demo' : 'Watch on YouTube'}
+            imageUrl={entry?.imageUrl}
+          />
 
           {!entry ? (
             <div className="rounded-xl border border-ink-800 bg-ink-850 p-4 text-sm text-zinc-300">
@@ -159,15 +164,17 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
                 </div>
               </Section>
 
-              {/* Form steps stay expanded — the active reference during a set. */}
+              {/* Form steps stay expanded — the active reference during a set.
+                  Larger font + bigger step numbers so it's readable arm's-length
+                  in dim gym lighting. */}
               <Section title="Form (step by step)" icon={<ListOrdered size={14} />}>
-                <ol className="space-y-1.5 text-sm text-zinc-200">
+                <ol className="space-y-2.5 text-base leading-relaxed text-zinc-100">
                   {entry.formSteps.map((c, i) => (
-                    <li key={i} className="flex gap-2.5">
-                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[11px] font-semibold text-rose-glow">
+                    <li key={i} className="flex gap-3">
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/25 text-sm font-bold text-rose-glow">
                         {i + 1}
                       </span>
-                      <span>{c}</span>
+                      <span className="pt-0.5">{c}</span>
                     </li>
                   ))}
                 </ol>
@@ -304,13 +311,31 @@ function CollapsibleSection({
   );
 }
 
-function VideoBlock({ url, imageUrl }: { url: string; imageUrl?: string }) {
+/**
+ * Build a YouTube search URL for the exercise. No API call, just a
+ * normal search query that opens in a new tab — works on every device,
+ * including phones in the gym, with zero auth or quota.
+ */
+function buildYouTubeSearchUrl(name: string): string {
+  const q = encodeURIComponent(`${name} proper form`);
+  return `https://www.youtube.com/results?search_query=${q}`;
+}
+
+function VideoBlock({
+  url,
+  label,
+  imageUrl,
+}: {
+  url: string;
+  label: string;
+  imageUrl?: string;
+}) {
   return (
     <a
       href={url}
       target="_blank"
       rel="noreferrer"
-      className="group block aspect-[16/7] w-full overflow-hidden rounded-xl border border-ink-800 bg-ink-850"
+      className="group block aspect-[16/7] w-full overflow-hidden rounded-xl border-2 border-accent/40 bg-ink-850 transition active:scale-[0.99]"
     >
       <div className="relative flex h-full w-full items-center justify-center">
         {imageUrl ? (
@@ -322,8 +347,9 @@ function VideoBlock({ url, imageUrl }: { url: string; imageUrl?: string }) {
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-ink-800 to-ink-900" />
         )}
-        <div className="relative z-10 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white shadow-glow">
-          <PlayCircle size={16} /> Watch demo
+        {/* Big high-contrast button — sized for thumb taps in gym lighting. */}
+        <div className="relative z-10 inline-flex items-center gap-2.5 rounded-full bg-accent px-6 py-3 text-base font-semibold text-white shadow-glow ring-2 ring-white/10">
+          <PlayCircle size={20} /> {label}
         </div>
       </div>
     </a>

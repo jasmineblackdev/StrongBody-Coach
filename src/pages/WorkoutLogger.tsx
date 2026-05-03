@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Save, Plus, Trash2, ClipboardCheck } from 'lucide-react';
+import { Save, Plus, Trash2, ClipboardCheck, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
+import RestTimer from '../components/RestTimer';
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import { dayLabel } from '../lib/workoutPlan';
 import { decisionsForLog } from '../lib/autoAdjust';
 import { generateProposal } from '../lib/applyAdjustments';
+import { recommendRest } from '../lib/restTimer';
 import type {
   ExerciseLog,
   ProblemArea,
@@ -54,6 +56,12 @@ export default function WorkoutLoggerPage() {
   const [savedLog, setSavedLog] = useState<WorkoutLog | null>(null);
   const [proposalChangeCount, setProposalChangeCount] = useState<number | null>(null);
 
+  // Rest timer state — armed (with a fresh ID) when the user logs a set.
+  // Bumping armedAt to a new value resets and auto-starts the timer.
+  const [restArmedAt, setRestArmedAt] = useState<number | null>(null);
+  const [restExerciseIdx, setRestExerciseIdx] = useState<number | null>(null);
+  const [restRecommendedSec, setRestRecommendedSec] = useState<number>(90);
+
   function changeSession(id: string) {
     setSessionId(id);
     const s = plan.sessions.find((x) => x.id === id) ?? plan.sessions[0];
@@ -86,6 +94,26 @@ export default function WorkoutLoggerPage() {
 
   function toggleSoreness(area: ProblemArea) {
     setSoreness((prev) => (prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]));
+  }
+
+  /**
+   * Mark a set as done — arms the rest timer with a recommendation tailored
+   * to this exercise + the just-logged set's RPE / missed signals. Pure
+   * client-side; nothing is saved until the full session save() runs.
+   */
+  function logSetDone(exIdx: number, setIdx: number) {
+    const pres = session.prescriptions[exIdx];
+    const set = exerciseLogs[exIdx]?.sets[setIdx];
+    if (!pres || !set) return;
+    const rec = recommendRest(pres, {
+      lastSetRpe: set.rpe,
+      lastSetMissed: !!set.missed,
+      phase: session.phase,
+      goal: profile.goal,
+    });
+    setRestRecommendedSec(rec.seconds);
+    setRestExerciseIdx(exIdx);
+    setRestArmedAt(Date.now());
   }
 
   function save() {
@@ -245,14 +273,27 @@ export default function WorkoutLoggerPage() {
                         </label>
                       </div>
 
-                      {/* Remove button — desktop column only; mobile has inline button */}
-                      <button
-                        onClick={() => removeSet(exIdx, setIdx)}
-                        className="hidden sm:col-span-1 sm:inline-flex sm:items-center sm:justify-center sm:rounded-lg sm:border sm:border-ink-700 sm:p-1.5 sm:text-zinc-400 sm:hover:bg-ink-800"
-                        aria-label="Remove set"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {/* Set-done + remove buttons. The Done button arms the
+                          rest timer with a recommendation tailored to this
+                          set. Big enough to thumb-tap mid-session. */}
+                      <div className="mt-2 flex items-center gap-2 sm:col-span-1 sm:mt-0">
+                        <button
+                          onClick={() => logSetDone(exIdx, setIdx)}
+                          disabled={!s.weight && !s.reps}
+                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-accent/40 bg-accent/10 px-2 py-2 text-xs font-semibold text-rose-glow hover:bg-accent/20 active:scale-95 disabled:opacity-40 sm:flex-none sm:px-2 sm:py-1.5"
+                          aria-label="Set done — start rest timer"
+                        >
+                          <Timer size={12} />
+                          Done
+                        </button>
+                        <button
+                          onClick={() => removeSet(exIdx, setIdx)}
+                          className="hidden sm:inline-flex sm:items-center sm:justify-center sm:rounded-lg sm:border sm:border-ink-700 sm:p-1.5 sm:text-zinc-400 sm:hover:bg-ink-800"
+                          aria-label="Remove set"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -395,6 +436,16 @@ export default function WorkoutLoggerPage() {
             </div>
           )}
         </Card>
+      )}
+
+      {restArmedAt !== null && restExerciseIdx !== null && (
+        <RestTimer
+          armedAt={restArmedAt}
+          recommendedSeconds={restRecommendedSec}
+          exerciseName={session.prescriptions[restExerciseIdx]?.name ?? 'Rest'}
+          label={`Resting — ${session.prescriptions[restExerciseIdx]?.name ?? ''}`}
+          onDismiss={() => setRestArmedAt(null)}
+        />
       )}
     </div>
   );
