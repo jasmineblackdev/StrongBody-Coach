@@ -1,47 +1,15 @@
-import type { DailyMealPlan, MealItem, Profile } from '../types';
+import type { BodyMetric, DailyMealPlan, MealItem, Profile, WorkoutLog } from '../types';
+import { computeMacroTargets } from './macroEngine';
 
 interface PlanContext {
   profile: Profile;
   isTrainingDay: boolean;
   hungerLevel?: number; // 1-10 (today)
   workoutTime?: 'morning' | 'midday' | 'evening';
-}
-
-// Mifflin-St Jeor for women
-function bmrFemale(p: Profile) {
-  const kg = p.weightLbs * 0.4536;
-  const cm = p.heightInches * 2.54;
-  return 10 * kg + 6.25 * cm - 5 * p.age - 161;
-}
-
-function targetCalories(p: Profile, isTrainingDay: boolean, hungerLevel = 5) {
-  const bmr = bmrFemale(p);
-  const activity = isTrainingDay ? 1.5 : 1.35;
-  let tdee = bmr * activity;
-
-  // Goal-based deficit/surplus
-  if (p.goal === 'fat_loss') tdee -= 450;
-  else if (p.goal === 'recomp') tdee -= 250;
-  else if (p.goal === 'meet_prep') tdee += 50;
-  // strength: maintenance
-
-  // Wegovy adjustment: if appetite is low, allow a softer floor
-  if (p.onWegovy && hungerLevel <= 3) tdee -= 100;
-  if (hungerLevel >= 8) tdee += 150;
-
-  // Floor for a 5'2" lifter
-  return Math.max(1450, Math.round(tdee / 10) * 10);
-}
-
-function macros(p: Profile, calories: number, isTrainingDay: boolean) {
-  const proteinG = Math.max(p.proteinTargetG ?? 0, Math.round(p.weightLbs * 0.9));
-  const proteinCals = proteinG * 4;
-  // Carbs: more on training days, especially around workout
-  const carbsG = Math.round(((isTrainingDay ? 0.42 : 0.32) * calories) / 4);
-  const carbCals = carbsG * 4;
-  const fatCals = Math.max(0, calories - proteinCals - carbCals);
-  const fatG = Math.max(40, Math.round(fatCals / 9));
-  return { proteinG, carbsG, fatG };
+  /** Body weight history — drives weight-trend correction. */
+  metrics?: BodyMetric[];
+  /** Recent workout logs — drives cross-session hunger pattern. */
+  recentLogs?: WorkoutLog[];
 }
 
 function dislikeFilter(p: Profile, ing: string): boolean {
@@ -172,19 +140,25 @@ function pickMeals(p: Profile, isTrainingDay: boolean, count: number): MealItem[
 }
 
 export function buildDailyPlan(ctx: PlanContext): DailyMealPlan {
-  const { profile, isTrainingDay, hungerLevel = 5 } = ctx;
-  const calorieTarget = targetCalories(profile, isTrainingDay, hungerLevel);
-  const m = macros(profile, calorieTarget, isTrainingDay);
+  const { profile, isTrainingDay, hungerLevel = 5, metrics, recentLogs } = ctx;
+
+  const targets = computeMacroTargets({
+    profile,
+    isTrainingDay,
+    hungerLevel,
+    metrics,
+    recentLogs,
+  });
 
   const meals = pickMeals(profile, isTrainingDay, profile.mealCount || 4);
 
-  // Re-scale meals so totals roughly match target macros
+  // Re-scale meal templates so totals roughly match macroEngine targets.
   const totalP = meals.reduce((a, b) => a + b.proteinG, 0);
   const totalC = meals.reduce((a, b) => a + b.carbsG, 0);
   const totalF = meals.reduce((a, b) => a + b.fatG, 0);
-  const sP = totalP > 0 ? m.proteinG / totalP : 1;
-  const sC = totalC > 0 ? m.carbsG / totalC : 1;
-  const sF = totalF > 0 ? m.fatG / totalF : 1;
+  const sP = totalP > 0 ? targets.proteinG / totalP : 1;
+  const sC = totalC > 0 ? targets.carbsG / totalC : 1;
+  const sF = totalF > 0 ? targets.fatG / totalF : 1;
   const scaled = meals.map((meal) => {
     const proteinG = Math.round(meal.proteinG * sP);
     const carbsG = Math.round(meal.carbsG * sC);
@@ -209,19 +183,10 @@ export function buildDailyPlan(ctx: PlanContext): DailyMealPlan {
     new Set(scaled.flatMap((meal) => meal.ingredients.map((s) => s.replace(/^\d+(\.\d+)?\s*[a-zA-Z]+\s*/, '').trim()))),
   ).slice(0, 30);
 
-  let coachNote = isTrainingDay
-    ? 'Training day. Push 30–45g carbs in the meal before your lift and 40–50g after. That is your performance and recovery food.'
+  const baseNote = isTrainingDay
+    ? 'Training day. Push 30–45g carbs in the meal before your lift and 40–50g after — that is your performance and recovery food.'
     : 'Rest day. Lower carbs, hold protein, prioritize veggies and whole foods. Walk after meals to ease bloating.';
-  if (profile.onWegovy) {
-    coachNote +=
-      ' Wegovy note: appetite often dips midday and rebounds at night. Front-load protein at breakfast and lunch so dinner is easy when hunger spikes.';
-  }
-  if (hungerLevel >= 8) {
-    coachNote += ` You logged hunger ${hungerLevel}/10 — added ~150 kcal as a post-workout carb bump.`;
-  }
-  if (hungerLevel <= 3 && profile.onWegovy) {
-    coachNote += ` Hunger is low (${hungerLevel}/10) — aim to hit at least 80% of protein even if you skip a meal. Liquid protein is your friend.`;
-  }
+  const coachNote = [baseNote, ...targets.notes].join(' ');
 
   return {
     dayLabel: isTrainingDay ? 'Training Day' : 'Rest Day',

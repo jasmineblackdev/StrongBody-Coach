@@ -28,36 +28,76 @@ function write<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+// ─── Reactive layer ──────────────────────────────────────────────────────────
+// Every mutation bumps storeVersion and notifies subscribers, so React
+// components can re-render on changes from any source (Profile save, Logger
+// save, CloudPanel pull, etc.). Read APIs stay synchronous.
+
+let storeVersion = 0;
+const subscribers = new Set<() => void>();
+
+function emit(): void {
+  storeVersion += 1;
+  subscribers.forEach((fn) => fn());
+}
+
+export function subscribeStore(listener: () => void): () => void {
+  subscribers.add(listener);
+  return () => {
+    subscribers.delete(listener);
+  };
+}
+
+export function getStoreVersion(): number {
+  return storeVersion;
+}
+
 export const store = {
   getProfile: (): Profile | null => read<Profile | null>(KEYS.profile, null),
-  setProfile: (p: Profile) => write(KEYS.profile, p),
+  setProfile: (p: Profile) => {
+    write(KEYS.profile, p);
+    emit();
+  },
 
   getLogs: (): WorkoutLog[] => read<WorkoutLog[]>(KEYS.logs, []),
   addLog: (log: WorkoutLog) => {
     const logs = store.getLogs();
     logs.unshift(log);
     write(KEYS.logs, logs);
+    emit();
   },
-  setLogs: (logs: WorkoutLog[]) => write(KEYS.logs, logs),
+  setLogs: (logs: WorkoutLog[]) => {
+    write(KEYS.logs, logs);
+    emit();
+  },
 
   getMetrics: (): BodyMetric[] => read<BodyMetric[]>(KEYS.metrics, []),
   addMetric: (m: BodyMetric) => {
     const metrics = store.getMetrics();
     metrics.unshift(m);
     write(KEYS.metrics, metrics);
+    emit();
   },
-  setMetrics: (metrics: BodyMetric[]) => write(KEYS.metrics, metrics),
+  setMetrics: (metrics: BodyMetric[]) => {
+    write(KEYS.metrics, metrics);
+    emit();
+  },
 
   getPlan: (): WeeklyPlan | null => read<WeeklyPlan | null>(KEYS.plan, null),
-  setPlan: (plan: WeeklyPlan) => write(KEYS.plan, plan),
+  setPlan: (plan: WeeklyPlan) => {
+    write(KEYS.plan, plan);
+    emit();
+  },
 
   getWeekNumber: (): number => read<number>(KEYS.weekNumber, 1),
-  setWeekNumber: (n: number) => write(KEYS.weekNumber, n),
+  setWeekNumber: (n: number) => {
+    write(KEYS.weekNumber, n);
+    emit();
+  },
 
   getProposal: (): PlanProposal | null => {
     const p = read<PlanProposal | null>(KEYS.proposal, null);
     if (!p) return null;
-    // Drop proposals from older app versions that lack the ops model
     const valid =
       Array.isArray(p.changes) &&
       p.changes.every((c) => typeof c.id === 'string' && Array.isArray(c.ops));
@@ -67,8 +107,17 @@ export const store = {
     }
     return p;
   },
-  setProposal: (p: PlanProposal) => write(KEYS.proposal, p),
-  clearProposal: () => localStorage.removeItem(KEYS.proposal),
+  setProposal: (p: PlanProposal) => {
+    write(KEYS.proposal, p);
+    emit();
+  },
+  clearProposal: () => {
+    localStorage.removeItem(KEYS.proposal);
+    emit();
+  },
 
-  reset: () => Object.values(KEYS).forEach((k) => localStorage.removeItem(k)),
+  reset: () => {
+    Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
+    emit();
+  },
 };

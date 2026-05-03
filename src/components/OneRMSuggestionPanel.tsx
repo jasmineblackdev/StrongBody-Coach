@@ -1,136 +1,240 @@
-import { useState } from 'react';
-import { TrendingUp, Check, Sparkles } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { TrendingUp, TrendingDown, Minus, Check, HelpCircle } from 'lucide-react';
 import { Card, CoachMessage, Pill, SectionHeader } from './ui';
 import { store } from '../lib/storage';
+import { useStoreVersion } from '../hooks/useStore';
 import { buildWeeklyPlan } from '../lib/workoutPlan';
+import {
+  TREND_LABEL,
+  estimateAllLifts,
+  type LiftEstimate,
+  type LiftKey,
+  type StrengthTrend,
+} from '../lib/strengthEngine';
 import type { Profile } from '../types';
 
-interface Suggestion {
-  key: 'squat1RM' | 'bench1RM' | 'deadlift1RM';
-  label: string;
-  value: number;
-  evidence: string;
+const PROFILE_KEY: Record<LiftKey, 'squat1RM' | 'bench1RM' | 'deadlift1RM'> = {
+  squat: 'squat1RM',
+  bench: 'bench1RM',
+  deadlift: 'deadlift1RM',
+};
+
+const LABEL: Record<LiftKey, string> = {
+  squat: 'Squat',
+  bench: 'Bench',
+  deadlift: 'Deadlift',
+};
+
+const TREND_TONE: Record<StrengthTrend, 'success' | 'warning' | 'danger' | 'default'> = {
+  improving: 'success',
+  flat: 'default',
+  regressing: 'danger',
+  unknown: 'default',
+};
+
+function TrendIcon({ trend }: { trend: StrengthTrend }) {
+  if (trend === 'improving') return <TrendingUp size={12} />;
+  if (trend === 'regressing') return <TrendingDown size={12} />;
+  if (trend === 'flat') return <Minus size={12} />;
+  return <HelpCircle size={12} />;
 }
 
-// Estimates derived from your Trainerize screenshots (Feb–Apr 2026):
-//   Squat: 5 × 185 @ RPE 7 (Mar 9) → Epley 1RM ≈ 216 lb
-//   Bench: top single 185 + 3 × 165 @ RPE 8 (Apr 28) → comfortable 1RM ≈ 190 lb
-//   Deadlift: 3 × 245 @ RPE 9, missed 4th triple (Feb 4) → strength 1RM ≈ 270–280
-const SUGGESTIONS: Suggestion[] = [
-  {
-    key: 'squat1RM',
-    label: 'Squat',
-    value: 215,
-    evidence: '5 × 185 @ RPE 7 on Mar 9 — Epley estimate ≈ 216 lb.',
-  },
-  {
-    key: 'bench1RM',
-    label: 'Bench',
-    value: 190,
-    evidence: 'Top single 185 + 3 × 165 @ RPE 8 on Apr 28 — comfortable 1RM ≈ 190 lb.',
-  },
-  {
-    key: 'deadlift1RM',
-    label: 'Deadlift',
-    value: 275,
-    evidence: '3 × 245 @ RPE 9 on Feb 4 — Epley ≈ 270 lb, with room as fatigue clears.',
-  },
-];
-
 export default function OneRMSuggestionPanel() {
-  const [profile, setProfile] = useState<Profile>(() => store.getProfile()!);
+  useStoreVersion(); // re-render on any store change
+  const profile = store.getProfile()!;
+  const logs = store.getLogs();
+  const estimates = useMemo(() => estimateAllLifts(logs), [logs]);
   const [savedAll, setSavedAll] = useState(false);
+  const [pending, setPending] = useState<LiftKey | null>(null);
+  const lifts: LiftKey[] = ['squat', 'bench', 'deadlift'];
 
   function applyAndRebuild(updates: Partial<Profile>) {
     const next: Profile = { ...profile, ...updates };
     store.setProfile(next);
     const phase = store.getPlan()?.phase ?? 'hypertrophy';
     store.setPlan(buildWeeklyPlan(next, store.getWeekNumber(), phase));
-    setProfile(next);
   }
 
-  function applyOne(s: Suggestion) {
-    applyAndRebuild({ [s.key]: s.value } as Partial<Profile>);
+  function applyOne(lift: LiftKey, value: number) {
+    applyAndRebuild({ [PROFILE_KEY[lift]]: value } as Partial<Profile>);
     setSavedAll(false);
+    setPending(null);
   }
 
   function applyAll() {
-    applyAndRebuild({
-      squat1RM: SUGGESTIONS[0].value,
-      bench1RM: SUGGESTIONS[1].value,
-      deadlift1RM: SUGGESTIONS[2].value,
-    });
+    const updates: Partial<Profile> = {};
+    for (const lift of lifts) {
+      const e = estimates[lift];
+      if (e.estimated1RM > 0) {
+        updates[PROFILE_KEY[lift]] = e.estimated1RM;
+      }
+    }
+    if (Object.keys(updates).length === 0) return;
+    applyAndRebuild(updates);
     setSavedAll(true);
   }
+
+  const anyEstimate = lifts.some((l) => estimates[l].estimated1RM > 0);
 
   return (
     <Card>
       <SectionHeader
         title="1RM calibration"
-        subtitle="Suggested 1RMs from your Trainerize history. Applying rebuilds your weekly plan at the new percentages."
+        subtitle="Live estimates from your workout logs (adjusted Epley with RPE → reps in reserve)."
         action={
-          <button onClick={applyAll} className="btn-primary">
+          <button
+            onClick={applyAll}
+            disabled={!anyEstimate}
+            className="btn-primary"
+          >
             <TrendingUp size={16} /> Apply all
           </button>
         }
       />
 
-      <div className="space-y-2">
-        {SUGGESTIONS.map((s) => {
-          const current = profile[s.key] as number;
-          const isApplied = current === s.value;
-          const delta = s.value - current;
-          return (
-            <div
-              key={s.key}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-800 bg-ink-850 p-3.5"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-zinc-100">{s.label}</span>
-                  {isApplied ? (
-                    <Pill tone="success">
-                      <Check size={12} /> matched
-                    </Pill>
-                  ) : (
-                    <Pill tone="accent">
-                      <Sparkles size={12} /> {delta > 0 ? '+' : ''}
-                      {delta} lb
-                    </Pill>
-                  )}
-                </div>
-                <div className="mt-1 text-sm">
-                  <span className="text-zinc-500 line-through">{current} lb</span>
-                  <span className="mx-2 text-zinc-500">→</span>
-                  <span className="font-semibold text-zinc-100">{s.value} lb</span>
-                </div>
-                <div className="mt-1 text-xs text-zinc-400">{s.evidence}</div>
-              </div>
-              <button
-                onClick={() => applyOne(s)}
-                disabled={isApplied}
-                className={isApplied ? 'btn-ghost' : 'btn-outline'}
-              >
-                <Check size={14} /> {isApplied ? 'Applied' : 'Apply'}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+      {!anyEstimate && (
+        <div className="rounded-xl border border-ink-800 bg-ink-850 p-4 text-sm text-zinc-300">
+          No usable evidence in your logs yet. Log a working set on Squat / Bench / Deadlift
+          (with RPE) and an estimate will appear here automatically.
+        </div>
+      )}
+
+      {anyEstimate && (
+        <div className="space-y-2">
+          {lifts.map((lift) => (
+            <LiftRow
+              key={lift}
+              lift={lift}
+              label={LABEL[lift]}
+              current={profile[PROFILE_KEY[lift]] as number}
+              estimate={estimates[lift]}
+              onApply={() => {
+                if (pending === lift) {
+                  applyOne(lift, estimates[lift].estimated1RM);
+                } else {
+                  setPending(lift);
+                }
+              }}
+              onCancel={() => setPending(null)}
+              isPending={pending === lift}
+            />
+          ))}
+        </div>
+      )}
 
       {savedAll && (
         <div className="mt-4">
           <CoachMessage tone="success" title="1RMs updated">
-            All three 1RMs applied. Your weekly plan rebuilt at the new percentages — main-lift
-            top sets in Workout Plan reflect the new loads.
+            All available estimates applied. Your weekly plan rebuilt at the new percentages.
           </CoachMessage>
         </div>
       )}
 
       <p className="mt-3 text-xs text-zinc-500">
-        Rebuilding the plan replaces any accepted modifications from previous proposals (added
-        accessories, swaps). Your workout logs are untouched. Push to cloud manually when ready.
+        Manual values are never overwritten without the explicit Apply step. Rebuilding the plan
+        replaces accepted modifications from previous proposals; logs are untouched.
       </p>
     </Card>
+  );
+}
+
+function LiftRow({
+  lift,
+  label,
+  current,
+  estimate,
+  isPending,
+  onApply,
+  onCancel,
+}: {
+  lift: LiftKey;
+  label: string;
+  current: number;
+  estimate: LiftEstimate;
+  isPending: boolean;
+  onApply: () => void;
+  onCancel: () => void;
+}) {
+  void lift;
+  const value = estimate.estimated1RM;
+  const hasEstimate = value > 0;
+  const isApplied = hasEstimate && current === value;
+  const delta = hasEstimate ? value - current : 0;
+  const ev = estimate.evidence;
+
+  return (
+    <div className="rounded-xl border border-ink-800 bg-ink-850 p-3.5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-zinc-100">{label}</span>
+
+            {!hasEstimate ? (
+              <Pill>not enough data</Pill>
+            ) : isApplied ? (
+              <Pill tone="success">
+                <Check size={12} /> matched
+              </Pill>
+            ) : (
+              <Pill tone="accent">
+                {delta > 0 ? '+' : ''}
+                {delta} lb suggested
+              </Pill>
+            )}
+
+            {hasEstimate && estimate.trend !== 'unknown' && (
+              <Pill tone={TREND_TONE[estimate.trend]}>
+                <TrendIcon trend={estimate.trend} /> {TREND_LABEL[estimate.trend]}
+              </Pill>
+            )}
+          </div>
+
+          {hasEstimate && (
+            <div className="mt-1 text-sm">
+              <span className="text-zinc-500">{current} lb (current)</span>
+              <span className="mx-2 text-zinc-500">→</span>
+              <span className="font-semibold text-zinc-100">{value} lb</span>
+            </div>
+          )}
+
+          {ev && (
+            <div className="mt-1 text-xs text-zinc-400">
+              From{' '}
+              <span className="text-zinc-300">
+                {ev.reps} × {ev.weight} lb{ev.rpe ? ` @ RPE ${ev.rpe}` : ''}
+              </span>{' '}
+              ({ev.prescriptionName} on {ev.date.slice(0, 10)}) · {estimate.sessionsAnalyzed}{' '}
+              session{estimate.sessionsAnalyzed === 1 ? '' : 's'} analyzed
+            </div>
+          )}
+        </div>
+
+        <div className="flex shrink-0 gap-1.5">
+          {hasEstimate && !isApplied && (
+            isPending ? (
+              <>
+                <button onClick={onCancel} className="btn-outline">
+                  Cancel
+                </button>
+                <button onClick={onApply} className="btn-primary">
+                  <Check size={14} /> Confirm overwrite
+                </button>
+              </>
+            ) : (
+              <button onClick={onApply} className="btn-outline">
+                <Check size={14} /> Apply
+              </button>
+            )
+          )}
+        </div>
+      </div>
+
+      {isPending && (
+        <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+          This will overwrite your manual {label} 1RM ({current} lb) with the engine's estimate
+          ({value} lb) and rebuild your weekly plan.
+        </div>
+      )}
+    </div>
   );
 }

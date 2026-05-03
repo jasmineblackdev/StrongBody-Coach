@@ -3,6 +3,7 @@ import { Save, Plus, Trash2, ClipboardCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
 import { store } from '../lib/storage';
+import { useStoreVersion } from '../hooks/useStore';
 import { dayLabel } from '../lib/workoutPlan';
 import { decisionsForLog } from '../lib/autoAdjust';
 import { generateProposal } from '../lib/applyAdjustments';
@@ -33,6 +34,7 @@ function emptyExerciseLog(name: string, sets = 3): ExerciseLog {
 }
 
 export default function WorkoutLoggerPage() {
+  useStoreVersion();
   const profile = store.getProfile()!;
   const plan = store.getPlan()!;
   const [sessionId, setSessionId] = useState(plan.sessions[0].id);

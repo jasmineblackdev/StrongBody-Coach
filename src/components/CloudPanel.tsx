@@ -47,9 +47,8 @@ export default function CloudPanel() {
     const r = await pullAll();
     setLastResult(r);
     setSyncing(null);
-    if (r.pulledProfile || r.pulledLogs || r.pulledMetrics) {
-      setTimeout(() => location.reload(), 600);
-    }
+    // Store mutations from pullAll() trigger re-render via useStoreVersion in
+    // each page — no reload needed.
   }
 
   if (loading) {

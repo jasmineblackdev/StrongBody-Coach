@@ -1,8 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Dumbbell, Trophy, HeartPulse, Salad, Target } from 'lucide-react';
+import { Flame, Dumbbell, Trophy, HeartPulse, Salad, Target, TrendingUp, TrendingDown, Minus, HelpCircle } from 'lucide-react';
 import { Card, CoachMessage, ProgressBar, SectionHeader, StatCard, Pill } from '../components/ui';
 import { BodyWeightChart, MacroDoughnut } from '../components/charts';
+import { useStoreVersion } from '../hooks/useStore';
+import { computeReadiness, READINESS_TONE, SUGGESTION_COPY } from '../lib/recoveryEngine';
+import { estimateAllLifts, TREND_LABEL, type StrengthTrend } from '../lib/strengthEngine';
 import { store } from '../lib/storage';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { buildDailyPlan } from '../lib/mealPlan';
@@ -28,6 +31,7 @@ function todayWorkout(weekNumber: number): WorkoutSession | null {
 }
 
 export default function Dashboard() {
+  useStoreVersion();
   const profile = store.getProfile();
   const metrics = store.getMetrics();
   const logs = store.getLogs();
@@ -36,6 +40,8 @@ export default function Dashboard() {
 
   const todays = todayWorkout(weekNumber);
   const weakPoints = useMemo(() => detectWeakPoints(logs), [logs]);
+  const readiness = useMemo(() => computeReadiness(logs), [logs]);
+  const liftEstimates = useMemo(() => estimateAllLifts(logs), [logs]);
 
   if (!profile || !plan) return null;
 
@@ -61,6 +67,8 @@ export default function Dashboard() {
     profile,
     isTrainingDay: isTrainingDayToday,
     hungerLevel: logs[0]?.hungerAfter ?? 5,
+    metrics,
+    recentLogs: logs,
   });
 
   const goalLeft = +(lastWeight - profile.goalWeightLbs).toFixed(1);
@@ -81,9 +89,20 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Coach hero */}
-      <CoachMessage title="Today's coaching read">
-        {weakPoints[0]
+      {/* Coach hero — readiness drives this when score is meaningful, else falls back to weak points */}
+      <CoachMessage
+        tone={
+          readiness.suggestion === 'deload' || readiness.suggestion === 'reduce'
+            ? 'warning'
+            : weakPoints[0]
+            ? 'accent'
+            : 'success'
+        }
+        title={`Today's coaching read · ${SUGGESTION_COPY[readiness.suggestion].headline}`}
+      >
+        {readiness.metrics.sessionsAnalyzed >= 2 && readiness.suggestion !== 'push'
+          ? `${SUGGESTION_COPY[readiness.suggestion].body} ${readiness.reasons[0] ?? ''}`
+          : weakPoints[0]
           ? `${weakPoints[0].title}. ${weakPoints[0].recommendation}`
           : 'Strong week so far. Keep RPE honest, hit your protein, and walk after dinner — Wegovy + walks is the cheat code for bloat.'}
       </CoachMessage>
@@ -122,10 +141,10 @@ export default function Dashboard() {
           hint="sessions this week"
         />
         <StatCard
-          label="Recovery"
+          label={`Recovery · ${SUGGESTION_COPY[readiness.suggestion].headline}`}
           value={recoveryAvg ? recoveryAvg.toFixed(1) : '—'}
           unit="/10"
-          hint="last 5 sessions"
+          hint={`readiness ${readiness.score}/100 (${readiness.readiness})`}
         />
       </div>
 
@@ -183,13 +202,28 @@ export default function Dashboard() {
           )}
         </Card>
 
-        {/* Big 3 */}
+        {/* Big 3 with live trend from logs */}
         <Card>
-          <SectionHeader title="Big 3" subtitle="Current 1RM estimates" />
+          <SectionHeader title="Big 3" subtitle="Current 1RM · live trend from logs" />
           <div className="space-y-4">
-            <Lift label="Squat" value={profile.squat1RM} icon={<Dumbbell size={16} />} />
-            <Lift label="Bench" value={profile.bench1RM} icon={<Trophy size={16} />} />
-            <Lift label="Deadlift" value={profile.deadlift1RM} icon={<Target size={16} />} />
+            <Lift
+              label="Squat"
+              value={profile.squat1RM}
+              icon={<Dumbbell size={16} />}
+              trend={liftEstimates.squat.trend}
+            />
+            <Lift
+              label="Bench"
+              value={profile.bench1RM}
+              icon={<Trophy size={16} />}
+              trend={liftEstimates.bench.trend}
+            />
+            <Lift
+              label="Deadlift"
+              value={profile.deadlift1RM}
+              icon={<Target size={16} />}
+              trend={liftEstimates.deadlift.trend}
+            />
           </div>
         </Card>
 
@@ -276,12 +310,41 @@ export default function Dashboard() {
   );
 }
 
-function Lift({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+function Lift({
+  label,
+  value,
+  icon,
+  trend,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  trend: StrengthTrend;
+}) {
+  const TrendIcon =
+    trend === 'improving'
+      ? TrendingUp
+      : trend === 'regressing'
+      ? TrendingDown
+      : trend === 'flat'
+      ? Minus
+      : HelpCircle;
+  const trendClass =
+    trend === 'improving'
+      ? 'text-success'
+      : trend === 'regressing'
+      ? 'text-danger'
+      : trend === 'flat'
+      ? 'text-zinc-400'
+      : 'text-zinc-500';
   return (
     <div className="flex items-center justify-between rounded-xl border border-ink-800 bg-ink-850 px-3 py-2.5">
       <div className="flex items-center gap-2 text-zinc-300">
         <span className="text-accent-soft">{icon}</span>
         <span className="text-sm font-semibold">{label}</span>
+        <span className={`inline-flex items-center gap-1 text-[11px] ${trendClass}`}>
+          <TrendIcon size={12} /> {TREND_LABEL[trend]}
+        </span>
       </div>
       <div className="font-display text-xl font-semibold text-zinc-100">
         {value} <span className="text-xs font-normal text-zinc-500">lb 1RM</span>

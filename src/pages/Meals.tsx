@@ -2,13 +2,27 @@ import { useMemo, useState } from 'react';
 import { RefreshCw, Salad } from 'lucide-react';
 import { Card, CoachMessage, Pill, ProgressBar, SectionHeader } from '../components/ui';
 import { store } from '../lib/storage';
+import { useStoreVersion } from '../hooks/useStore';
 import { buildDailyPlan } from '../lib/mealPlan';
 
 export default function MealsPage() {
+  useStoreVersion();
   const profile = store.getProfile()!;
+  const metrics = store.getMetrics();
+  const logs = store.getLogs();
   const [isTrainingDay, setIsTrainingDay] = useState(true);
   const [hunger, setHunger] = useState(5);
-  const plan = useMemo(() => buildDailyPlan({ profile, isTrainingDay, hungerLevel: hunger }), [profile, isTrainingDay, hunger]);
+  const plan = useMemo(
+    () =>
+      buildDailyPlan({
+        profile,
+        isTrainingDay,
+        hungerLevel: hunger,
+        metrics,
+        recentLogs: logs,
+      }),
+    [profile, isTrainingDay, hunger, metrics, logs],
+  );
   const proteinTarget = profile.proteinTargetG ?? Math.round(profile.weightLbs * 0.9);
 
   return (

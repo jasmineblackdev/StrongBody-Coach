@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Save } from 'lucide-react';
 import { Card, CoachMessage, SectionHeader, Pill } from '../components/ui';
+import { useStoreVersion } from '../hooks/useStore';
 import CloudPanel from '../components/CloudPanel';
 import TestDataPanel from '../components/TestDataPanel';
 import OneRMSuggestionPanel from '../components/OneRMSuggestionPanel';
@@ -33,6 +34,7 @@ const CARDIO: { key: CardioPref; label: string }[] = [
 ];
 
 export default function ProfilePage() {
+  useStoreVersion();
   const [p, setP] = useState<Profile>(() => store.getProfile()!);
   const [saved, setSaved] = useState(false);
 

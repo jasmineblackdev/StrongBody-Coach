@@ -4,6 +4,7 @@ import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
 import ProposalReview from '../components/ProposalReview';
 import ExerciseDetailsModal from '../components/ExerciseDetailsModal';
 import { store } from '../lib/storage';
+import { useStoreVersion } from '../hooks/useStore';
 import { applyChanges, generateProposal } from '../lib/applyAdjustments';
 import { buildWeeklyPlan, dayLabel } from '../lib/workoutPlan';
 import { findExercise } from '../lib/exerciseLibrary';
@@ -12,6 +13,7 @@ import type { PlanProposal, TrainingPhase, WorkoutSession } from '../types';
 const PHASES: TrainingPhase[] = ['hypertrophy', 'strength', 'peak', 'deload'];
 
 export default function WorkoutPlanPage() {
+  useStoreVersion();
   const profile = store.getProfile()!;
   const [weekNumber, setWeekNumber] = useState(store.getWeekNumber());
   const [phase, setPhase] = useState<TrainingPhase>(store.getPlan()?.phase ?? 'hypertrophy');

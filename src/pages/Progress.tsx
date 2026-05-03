@@ -3,11 +3,13 @@ import { Camera, Plus } from 'lucide-react';
 import { Card, CoachMessage, Pill, SectionHeader, StatCard } from '../components/ui';
 import { BigThreeChart, BodyWeightChart, ComplianceChart, MacroStackedBar } from '../components/charts';
 import { store } from '../lib/storage';
+import { useStoreVersion } from '../hooks/useStore';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { buildDailyPlan } from '../lib/mealPlan';
 import type { BodyMetric } from '../types';
 
 export default function ProgressPage() {
+  useStoreVersion();
   const profile = store.getProfile()!;
   const metrics = store.getMetrics();
   const logs = store.getLogs();
@@ -74,8 +76,8 @@ export default function ProgressPage() {
   function logMetric() {
     if (!newMetric.weightLbs && !newMetric.waistIn) return;
     store.addMetric(newMetric);
+    // Store mutation triggers re-render via useStoreVersion — no reload needed.
     setNewMetric({ ...newMetric, notes: '' });
-    location.reload();
   }
 
   return (

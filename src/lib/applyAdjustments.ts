@@ -12,6 +12,7 @@ import type {
 } from '../types';
 import { adjustExercise, sessionLevelDecisions } from './autoAdjust';
 import { buildWeeklyPlan } from './workoutPlan';
+import { computeReadiness } from './recoveryEngine';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -241,12 +242,14 @@ export function generateProposal({
   const fromWeek = currentPlan.weekNumber;
   const toWeek = fromWeek + 1;
 
-  // 1. Whole-week deload short-circuit
-  const fatigueLog = recentLogs.find((l) => (l.recoveryScore ?? 10) <= 4);
-  if (fatigueLog) {
+  // 1. Whole-week deload short-circuit — driven by multi-session readiness, not
+  //    just one bad recovery score.
+  const readiness = computeReadiness(recentLogs);
+  if (readiness.suggestion === 'deload') {
     const reason =
-      `Recovery is at ${fatigueLog.recoveryScore}/10. Deload week — 60% loads, RPE 6 cap, ` +
-      `volume cut by a third. Sleep, protein, walks.`;
+      `Readiness score ${readiness.score}/100 across last ${readiness.metrics.sessionsAnalyzed} sessions. ` +
+      readiness.reasons.join(' ') +
+      ' Deload week — 60% loads, RPE 6 cap, volume cut by a third. Sleep, protein, walks.';
     return {
       fromWeek,
       toWeek,
