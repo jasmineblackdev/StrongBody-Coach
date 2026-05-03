@@ -50,6 +50,13 @@ export interface Ingredient {
   tags: FoodTag[];
   /** Sensitivity keywords this food is off-limits if matched. */
   contains?: string[];
+  /**
+   * Max times this ingredient can appear in a single day's plan. Used to
+   * prevent supplements (whey, etc.) from dominating the daily meal mix
+   * — preference is whole-food sources, supplement once if hunger
+   * control needs it.
+   */
+  maxPerDay?: number;
 }
 
 // ─── Ingredient database ─────────────────────────────────────────────────────
@@ -70,10 +77,21 @@ export const INGREDIENTS: Ingredient[] = [
 
   // Plant proteins
   { name: 'Tofu (firm)', category: 'plant_protein', per100g: { p: 17, c: 2, f: 9 }, defaultServingG: 150, displayUnit: 'oz', tags: ['rest-friendly', 'lunch-ok', 'dinner-ok'] },
+  { name: 'Edamame (shelled)', category: 'plant_protein', per100g: { p: 11, c: 9, f: 5 }, defaultServingG: 150, displayUnit: 'cup', tags: ['low-bloat', 'snack-ok', 'mid-morning-ok'] },
+
+  // Whole-food snack proteins — preferred over whey for everyday meals.
+  // Whey is capped at 1/day via the maxPerDay field below.
+  { name: 'Hard-boiled eggs', category: 'fatty_protein', per100g: { p: 13, c: 1.1, f: 11 }, defaultServingG: 100, displayUnit: 'piece', tags: ['low-bloat', 'snack-ok', 'mid-morning-ok', 'breakfast-ok', 'wegovy-easy'] },
+  { name: 'Tuna (canned in water)', category: 'lean_protein', per100g: { p: 26, c: 0, f: 1 }, defaultServingG: 140, displayUnit: 'oz', tags: ['low-bloat', 'snack-ok', 'mid-morning-ok', 'lunch-ok', 'post-workout-ok'] },
+  { name: 'Deli turkey (low-sodium)', category: 'lean_protein', per100g: { p: 18, c: 1, f: 1 }, defaultServingG: 100, displayUnit: 'oz', tags: ['low-bloat', 'snack-ok', 'mid-morning-ok', 'lunch-ok', 'wegovy-easy'] },
+  { name: 'Rotisserie chicken (skinless)', category: 'lean_protein', per100g: { p: 28, c: 0, f: 4 }, defaultServingG: 120, displayUnit: 'oz', tags: ['low-bloat', 'snack-ok', 'lunch-ok', 'dinner-ok', 'post-workout-ok'] },
 
   // Dairy proteins
   { name: 'Non-fat Greek yogurt (lactose-free)', category: 'dairy_protein', per100g: { p: 10, c: 4, f: 0 }, defaultServingG: 200, displayUnit: 'cup', tags: ['low-bloat', 'breakfast-ok', 'mid-morning-ok', 'snack-ok', 'wegovy-easy'], contains: ['dairy'] },
-  { name: 'Whey isolate', category: 'dairy_protein', per100g: { p: 90, c: 2, f: 1 }, defaultServingG: 30, displayUnit: 'g', tags: ['low-bloat', 'wegovy-easy', 'breakfast-ok', 'mid-morning-ok', 'pre-workout-ok', 'post-workout-ok', 'snack-ok'], contains: ['whey'] },
+  // Whey isolate — capped at 1/day (maxPerDay). Use it as the hunger-
+  // control lever in the slot most prone to cravings (post-workout or
+  // late-afternoon snack), not as the default snack protein.
+  { name: 'Whey isolate', category: 'dairy_protein', per100g: { p: 90, c: 2, f: 1 }, defaultServingG: 30, displayUnit: 'g', tags: ['low-bloat', 'wegovy-easy', 'pre-workout-ok', 'post-workout-ok', 'snack-ok'], contains: ['whey'], maxPerDay: 1 },
 
   // Starchy carbs
   { name: 'Jasmine rice (cooked)', category: 'starchy_carb', per100g: { p: 2.7, c: 28, f: 0.3 }, defaultServingG: 150, displayUnit: 'cup', tags: ['low-bloat', 'training-friendly', 'lunch-ok', 'dinner-ok', 'pre-workout-ok', 'post-workout-ok'] },
@@ -239,6 +257,7 @@ function pickByCategory(
   slot: Slot,
   daySeed: number,
   slotIndex: number,
+  usageCounts?: Map<string, number>,
 ): Ingredient | null {
   const slotTag = SLOT_SPECS[slot].slotTag;
   for (const cat of categories) {
@@ -247,6 +266,11 @@ function pickByCategory(
     // (e.g., olive oil, lemon, condiments).
     const candidates = pool.filter((f) => {
       if (f.category !== cat) return false;
+      // Daily-cap filter: skip foods that have hit their maxPerDay quota.
+      if (typeof f.maxPerDay === 'number') {
+        const used = usageCounts?.get(f.name) ?? 0;
+        if (used >= f.maxPerDay) return false;
+      }
       const hasAnySlotTag = f.tags.some((t) =>
         ALL_SLOT_TAGS.includes(t as FoodTag),
       );
@@ -429,6 +453,16 @@ export function composeMeals(args: ComposeArgs): MealItem[] {
 
   const meals: MealItem[] = [];
 
+  // Per-day ingredient usage counter — drives the maxPerDay cap so
+  // capped foods (e.g., whey isolate) appear at most N times across
+  // the day's meals.
+  const usageCounts = new Map<string, number>();
+  function bump(food: Ingredient): void {
+    if (typeof food.maxPerDay === 'number') {
+      usageCounts.set(food.name, (usageCounts.get(food.name) ?? 0) + 1);
+    }
+  }
+
   slots.forEach((slot, slotIndex) => {
     const spec = SLOT_SPECS[slot];
     const sh = spec.shape;
@@ -449,7 +483,7 @@ export function composeMeals(args: ComposeArgs): MealItem[] {
     // Carb source — scale to hit slot's carb share, but cap at a realistic
     // serving so we don't prescribe "2.5 cup sweet potato".
     if (spec.carbCategories) {
-      const carb = pickByCategory(pool, spec.carbCategories, slot, daySeed + 1, slotIndex);
+      const carb = pickByCategory(pool, spec.carbCategories, slot, daySeed + 1, slotIndex, usageCounts);
       if (carb) {
         items.push(
           scaleByCarbs(
@@ -459,20 +493,27 @@ export function composeMeals(args: ComposeArgs): MealItem[] {
             Math.round(carb.defaultServingG * 1.4),
           ),
         );
+        bump(carb);
       }
     }
 
     // Veg — fixed serving (mostly free macros)
     if (spec.vegCategories) {
-      const veg = pickByCategory(pool, spec.vegCategories, slot, daySeed + 2, slotIndex);
-      if (veg) items.push(fixedPortion(veg));
+      const veg = pickByCategory(pool, spec.vegCategories, slot, daySeed + 2, slotIndex, usageCounts);
+      if (veg) {
+        items.push(fixedPortion(veg));
+        bump(veg);
+      }
     }
 
     // Fat — only if slot's fat share isn't already covered by other items
     const accumulatedFat = items.reduce((s, i) => s + i.fatG, 0);
     if (spec.fatCategories && accumulatedFat < slotFat * 0.7) {
-      const fat = pickByCategory(pool, spec.fatCategories, slot, daySeed + 3, slotIndex);
-      if (fat) items.push(fixedPortion(fat));
+      const fat = pickByCategory(pool, spec.fatCategories, slot, daySeed + 3, slotIndex, usageCounts);
+      if (fat) {
+        items.push(fixedPortion(fat));
+        bump(fat);
+      }
     }
 
     // Primary protein — scale to fill the gap between slotProtein and
@@ -480,8 +521,9 @@ export function composeMeals(args: ComposeArgs): MealItem[] {
     // the meal name still shows the protein first.
     const incidentalProtein = items.reduce((s, i) => s + i.proteinG, 0);
     const proteinGap = Math.max(5, slotProtein - incidentalProtein);
-    const protein = pickByCategory(pool, spec.proteinCategories, slot, daySeed, slotIndex);
+    const protein = pickByCategory(pool, spec.proteinCategories, slot, daySeed, slotIndex, usageCounts);
     if (protein) {
+      bump(protein);
       // For ultra-concentrated proteins (whey, very lean meats), keep the
       // serving close to the default and accept a protein shortfall rather
       // than over-scaling. The composer's other items + protein anchors in

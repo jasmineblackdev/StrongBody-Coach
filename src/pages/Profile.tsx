@@ -69,6 +69,14 @@ export default function ProfilePage() {
   const [p, setP] = useState<Profile>(() => store.getProfile()!);
   const [saved, setSaved] = useState(false);
 
+  // Detect divergence from the persisted store. Drives the sticky
+  // "Unsaved changes" banner so the user can save without scrolling
+  // down to the bottom Save button. Compares the JSON form to keep
+  // the check robust to nested objects and to ignore reference
+  // identity from spread updates.
+  const persisted = store.getProfile();
+  const hasUnsavedChanges = !!persisted && JSON.stringify(persisted) !== JSON.stringify(p);
+
   function update<K extends keyof Profile>(key: K, value: Profile[K]) {
     setP((prev) => ({ ...prev, [key]: value }));
     setSaved(false);
@@ -497,6 +505,35 @@ export default function ProfilePage() {
           <Save size={16} /> {saved ? 'Saved' : 'Save & rebuild plan'}
         </button>
       </div>
+
+      {/* Sticky "Unsaved changes" banner — surfaces when local form diverges
+          from the persisted profile. Sits above the bottom mobile nav so
+          the user can save without scrolling to the bottom button. */}
+      {hasUnsavedChanges && (
+        <div
+          className="fixed left-0 right-0 z-30 border-t-2 border-warning/40 bg-warning/15 px-3 py-3 shadow-glow backdrop-blur md:left-64"
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom) + 64px)',
+          }}
+        >
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-warning">
+                Unsaved changes
+              </div>
+              <div className="truncate text-sm font-bold text-zinc-100">
+                Tap save to persist your edits + rebuild the plan.
+              </div>
+            </div>
+            <button
+              onClick={save}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-white shadow-glow active:scale-95"
+            >
+              <Save size={14} /> Save
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

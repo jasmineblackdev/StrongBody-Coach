@@ -420,10 +420,11 @@ export default function WorkoutLoggerPage() {
                 {/* Header row — desktop only; mobile uses inline labels per input */}
                 <div className="mt-3 hidden grid-cols-12 gap-2 text-xs uppercase tracking-wider text-zinc-500 sm:grid">
                   <div className="col-span-1">#</div>
-                  <div className="col-span-3">Reps</div>
-                  <div className="col-span-3">Weight</div>
+                  <div className="col-span-2">Reps</div>
+                  <div className="col-span-2">Weight</div>
                   <div className="col-span-2">RPE</div>
-                  <div className="col-span-2">Missed</div>
+                  <div className="col-span-1">Missed</div>
+                  <div className="col-span-3">Done</div>
                   <div className="col-span-1"></div>
                 </div>
                 <div className="space-y-2 sm:space-y-1.5">
@@ -451,7 +452,7 @@ export default function WorkoutLoggerPage() {
                         <input
                           type="number"
                           inputMode="numeric"
-                          className="input col-span-1 sm:col-span-3"
+                          className="input col-span-1 sm:col-span-2"
                           value={s.reps || ''}
                           onChange={(e) => setSetField(exIdx, setIdx, 'reps', Number(e.target.value))}
                           placeholder={pres.reps}
@@ -459,7 +460,7 @@ export default function WorkoutLoggerPage() {
                         <input
                           type="number"
                           inputMode="decimal"
-                          className="input col-span-1 sm:col-span-3"
+                          className="input col-span-1 sm:col-span-2"
                           value={s.weight || ''}
                           onChange={(e) => setSetField(exIdx, setIdx, 'weight', Number(e.target.value))}
                           placeholder={`${pres.loadLbs ?? ''}`}
@@ -480,7 +481,7 @@ export default function WorkoutLoggerPage() {
                           onChange={(e) => setSetField(exIdx, setIdx, 'rpe', Number(e.target.value))}
                           placeholder="RPE"
                         />
-                        <label className="col-span-1 inline-flex items-center gap-2 text-xs text-zinc-300 sm:col-span-2 sm:text-zinc-400">
+                        <label className="col-span-1 inline-flex items-center gap-2 text-xs text-zinc-300 sm:col-span-1 sm:text-zinc-400">
                           <input
                             type="checkbox"
                             checked={!!s.missed}
@@ -489,31 +490,32 @@ export default function WorkoutLoggerPage() {
                             }
                             className="h-4 w-4 accent-pink-500"
                           />
-                          Missed
+                          <span className="sm:sr-only">Missed</span>
                         </label>
                       </div>
 
                       {/* Set-done + remove buttons. The Done button arms the
                           rest timer with a recommendation tailored to this
-                          set. Big enough to thumb-tap mid-session. */}
-                      <div className="mt-2 flex items-center gap-2 sm:col-span-1 sm:mt-0">
+                          set. Now wider on desktop (col-span-3) so the icon
+                          + label aren't cramped. */}
+                      <div className="mt-2 flex items-center gap-2 sm:col-span-3 sm:mt-0">
                         <button
                           onClick={() => logSetDone(exIdx, setIdx)}
                           disabled={!s.weight && !s.reps}
-                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-3 text-sm font-bold text-white shadow-glow active:scale-95 disabled:opacity-40 disabled:shadow-none sm:flex-none sm:px-3 sm:py-2"
+                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-3 text-sm font-bold text-white shadow-glow active:scale-95 disabled:opacity-40 disabled:shadow-none sm:py-2"
                           aria-label="Set done — start rest timer"
                         >
                           <Timer size={14} />
                           Done
                         </button>
-                        <button
-                          onClick={() => removeSet(exIdx, setIdx)}
-                          className="hidden sm:inline-flex sm:items-center sm:justify-center sm:rounded-lg sm:border sm:border-ink-700 sm:p-1.5 sm:text-zinc-400 sm:hover:bg-ink-800"
-                          aria-label="Remove set"
-                        >
-                          <Trash2 size={14} />
-                        </button>
                       </div>
+                      <button
+                        onClick={() => removeSet(exIdx, setIdx)}
+                        className="hidden sm:col-span-1 sm:inline-flex sm:items-center sm:justify-center sm:rounded-lg sm:border sm:border-ink-700 sm:p-1.5 sm:text-zinc-400 sm:hover:bg-ink-800"
+                        aria-label="Remove set"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   ))}
                 </div>
