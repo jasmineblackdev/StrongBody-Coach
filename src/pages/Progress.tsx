@@ -51,7 +51,7 @@ export default function ProgressPage() {
       const d = new Date(today);
       d.setDate(today.getDate() - (6 - i));
       const dow = d.getDay(); // 0=Sun
-      const isTrainingDay = ![0, 3].includes(dow);
+      const isTrainingDay = ![5, 6, 0].includes(dow); // Fri/Sat/Sun = home days
       const plan = buildDailyPlan({ profile, isTrainingDay });
       return {
         day: labels[(dow + 6) % 7],

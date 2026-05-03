@@ -72,13 +72,19 @@ export interface CoreCardioInput {
 
 /**
  * Map day-of-week to a home-session day. Returns null on lift days.
- * Wed/Sat/Sun = home days, all others = lift days for the default
- * 4-day-training profile.
+ *   Mon–Thu = lift days
+ *   Fri      → Home A (upper abs + boxing HIIT)
+ *   Sat      → Home B (lower abs + bike)
+ *   Sun      → Home C (core stability + treadmill)
+ *
+ * Earlier iterations used Wed for the upper-abs day; moved to Fri so
+ * core + cardio falls together on the back end of the week, leaving a
+ * clean 4-day Mon–Thu lift block.
  */
 export function homeDayForDow(dow: number): CoreCardioDay | null {
-  if (dow === 3) return 'home_a_upper';
-  if (dow === 6) return 'home_b_lower';
-  if (dow === 0) return 'home_c_stability';
+  if (dow === 5) return 'home_a_upper'; // Fri
+  if (dow === 6) return 'home_b_lower'; // Sat
+  if (dow === 0) return 'home_c_stability'; // Sun
   return null;
 }
 
@@ -526,7 +532,7 @@ export function getCoreCardioSession(
  * (the user's looking at the schedule, not what to do today).
  */
 export function getAllHomeSessions(input: Omit<CoreCardioInput, 'dayOfWeek'>): CoreCardioSession[] {
-  const days: number[] = [3, 6, 0]; // Wed, Sat, Sun
+  const days: number[] = [5, 6, 0]; // Fri, Sat, Sun
   const out: CoreCardioSession[] = [];
   for (const dow of days) {
     const s = getCoreCardioSession({ ...input, dayOfWeek: dow });

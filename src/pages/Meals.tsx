@@ -15,8 +15,9 @@ import FoodResponsePanel from '../components/FoodResponsePanel';
  * the typical 4–5 day split).
  */
 function defaultTrainingDay(): boolean {
-  const dow = new Date().getDay(); // 0 = Sun, 3 = Wed
-  return ![0, 3].includes(dow);
+  // Lift Mon–Thu, Home (Core + Cardio) Fri–Sun.
+  const dow = new Date().getDay();
+  return ![5, 6, 0].includes(dow);
 }
 
 export default function MealsPage() {

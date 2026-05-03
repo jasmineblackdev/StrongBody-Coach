@@ -15,6 +15,7 @@ import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
 import RestTimer from '../components/RestTimer';
 import FormRiskPanel from '../components/FormRiskPanel';
 import ExerciseDetailsModal from '../components/ExerciseDetailsModal';
+import SwapExerciseModal from '../components/SwapExerciseModal';
 import { explainPrescription } from '../lib/trainerPrescription';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { store } from '../lib/storage';
@@ -130,6 +131,20 @@ export default function WorkoutLoggerPage() {
 
   // Form modal — opens with the exercise the user tapped.
   const [formExercise, setFormExercise] = useState<string | null>(null);
+
+  // Swap modal — set to an exercise index when Swap pill is tapped.
+  // Swaps are session-local: mutate exerciseLogs[i].prescriptionName so
+  // both the display + the saved log reflect the swap. The plan in
+  // storage stays untouched.
+  const [swapExIdx, setSwapExIdx] = useState<number | null>(null);
+
+  function applySwap(exIdx: number, newName: string) {
+    setExerciseLogs((prev) => {
+      const next = structuredClone(prev);
+      next[exIdx].prescriptionName = newName;
+      return next;
+    });
+  }
 
   // Per-exercise quick-flag state. Toggling a chip appends its label to
   // painNotes and shows a warning. UI shows which flags have been tapped
@@ -305,6 +320,10 @@ export default function WorkoutLoggerPage() {
         <div className="space-y-4">
           {session.prescriptions.map((pres, exIdx) => {
             const exLog = exerciseLogs[exIdx];
+            // Display name reflects swaps — exerciseLogs[i].prescriptionName
+            // is the source of truth so display + saved log stay in sync.
+            const displayName = exLog?.prescriptionName ?? pres.name;
+            const wasSwapped = displayName !== pres.name;
             return (
               <div key={pres.name} className="rounded-2xl border border-ink-800 bg-ink-850 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -312,15 +331,20 @@ export default function WorkoutLoggerPage() {
                     {/* Bigger exercise name — readable arm's-length in dim
                         gym lighting. */}
                     <div className="font-display text-xl font-bold text-zinc-100">
-                      {pres.name}
+                      {displayName}
                     </div>
+                    {wasSwapped && (
+                      <div className="mt-0.5 text-[10px] uppercase tracking-wider text-rose-glow">
+                        swapped from {pres.name}
+                      </div>
+                    )}
                     <div className="mt-0.5 text-sm text-zinc-300">
                       target <span className="font-semibold text-zinc-100">{pres.sets} × {pres.reps}</span>
                       {pres.loadLbs ? <> · <span className="font-semibold text-zinc-100">{pres.loadLbs} lb</span></> : null}
                       {pres.rpeTarget ? ` · RPE ${pres.rpeTarget}` : ''}
                     </div>
                     {(() => {
-                      const last = lastTimeByExercise.get(pres.name);
+                      const last = lastTimeByExercise.get(displayName);
                       if (!last) return null;
                       const dateLabel = last.date.slice(0, 10);
                       return (
@@ -336,19 +360,19 @@ export default function WorkoutLoggerPage() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
-                      onClick={() => setFormExercise(pres.name)}
+                      onClick={() => setFormExercise(displayName)}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-semibold text-rose-glow active:scale-95"
-                      aria-label={`View form cues for ${pres.name}`}
+                      aria-label={`View form cues for ${displayName}`}
                     >
                       <Eye size={14} /> Form
                     </button>
-                    <Link
-                      to="/plan"
+                    <button
+                      onClick={() => setSwapExIdx(exIdx)}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-ink-700 bg-ink-850 px-3 py-2 text-xs font-semibold text-zinc-200 active:scale-95"
-                      aria-label="Swap to a safer variation"
+                      aria-label="Swap exercise"
                     >
                       <Replace size={14} /> Swap
-                    </Link>
+                    </button>
                     <button
                       onClick={() => addSet(exIdx)}
                       className="inline-flex items-center gap-1.5 rounded-xl border border-ink-700 bg-ink-850 px-3 py-2 text-xs font-semibold text-zinc-200 active:scale-95"
@@ -705,6 +729,18 @@ export default function WorkoutLoggerPage() {
           prescription={session.prescriptions.find((p) => p.name === formExercise)}
           phase={session.phase}
           onClose={() => setFormExercise(null)}
+        />
+      )}
+
+      {swapExIdx !== null && session.prescriptions[swapExIdx] && (
+        <SwapExerciseModal
+          current={{
+            ...session.prescriptions[swapExIdx],
+            name: exerciseLogs[swapExIdx]?.prescriptionName ?? session.prescriptions[swapExIdx].name,
+          }}
+          phase={session.phase}
+          onClose={() => setSwapExIdx(null)}
+          onSelect={(newName) => applySwap(swapExIdx, newName)}
         />
       )}
 

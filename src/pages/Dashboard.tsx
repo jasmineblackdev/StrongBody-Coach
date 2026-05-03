@@ -30,24 +30,26 @@ import PhotoSignalCard from '../components/PhotoSignalCard';
 import HomeSessionCard from '../components/HomeSessionCard';
 import TodayCoachAction from '../components/TodayCoachAction';
 import TodayMealsSummary from '../components/TodayMealsSummary';
+import WeekAheadCard from '../components/WeekAheadCard';
 import type { WorkoutDay, WorkoutSession } from '../types';
 
 function todayWorkout(weekNumber: number): WorkoutSession | null {
   const plan = store.getPlan();
   if (!plan) return null;
+  void weekNumber;
   const dayOfWeek = new Date().getDay(); // 0..6
-  // Map: Mon squat, Tue bench, Thu deadlift, Fri upper, Sat lower
+  // Lift Mon–Thu, Home (Core + Cardio) Fri–Sun. Returns null on home
+  // days so the Dashboard surfaces the HomeSessionCard instead of the
+  // Today CTA + workout.
   const map: Record<number, WorkoutDay> = {
-    1: 'squat',
-    2: 'bench',
-    4: 'deadlift',
-    5: 'upper_accessory',
-    6: 'lower_glute',
+    1: 'squat',           // Mon
+    2: 'bench',            // Tue
+    3: 'deadlift',         // Wed
+    4: 'upper_accessory',  // Thu
   };
   const target = map[dayOfWeek];
-  return (
-    plan.sessions.find((s) => s.day === target) ?? plan.sessions[0]
-  );
+  if (!target) return null;
+  return plan.sessions.find((s) => s.day === target) ?? plan.sessions[0];
 }
 
 export default function Dashboard() {
@@ -138,7 +140,7 @@ export default function Dashboard() {
       .slice(0, 5)
       .reduce((a, b) => a + b, 0) / Math.max(1, Math.min(5, logs.length));
 
-  const isTrainingDayToday = ![0, 3].includes(new Date().getDay()); // sun & wed = rest
+  const isTrainingDayToday = ![5, 6, 0].includes(new Date().getDay()); // Fri/Sat/Sun = home (core+cardio) days
   const meal = buildDailyPlan({
     profile,
     isTrainingDay: isTrainingDayToday,
@@ -328,43 +330,62 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Today's workout — top 3 exercises only as "focus points", with
-          a Start CTA. Full session detail lives on /log + /plan. */}
+      {/* Today's workout — top 3 by default; expand for full preview. */}
       {todays && !gymMode && (
-        <div className="rounded-2xl border border-ink-800 bg-ink-850 p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div>
+        <details className="group rounded-2xl border border-ink-800 bg-ink-850 transition open:border-accent/30">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
+            <div className="min-w-0">
               <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                 Top focus today
               </div>
-              <div className="text-sm font-bold text-zinc-100">
-                {dayLabel[todays.day]}
+              <div className="truncate text-sm font-bold text-zinc-100">
+                {dayLabel[todays.day]} · {todays.prescriptions.length} exercises
               </div>
             </div>
-            <Link to="/log" className="btn-primary">
-              <Dumbbell size={14} /> Start
-            </Link>
-          </div>
-          <ul className="mt-3 space-y-1.5 text-sm">
-            {todays.prescriptions.slice(0, 3).map((p) => (
-              <li
-                key={p.name}
-                className="flex items-baseline justify-between gap-2"
-              >
-                <span className="truncate text-zinc-100">{p.name}</span>
-                <span className="shrink-0 text-zinc-400 text-xs">
-                  {p.sets}×{p.reps}
-                  {p.loadLbs ? ` · ${p.loadLbs} lb` : ''}
-                </span>
-              </li>
-            ))}
-            {todays.prescriptions.length > 3 && (
-              <li className="text-[11px] text-zinc-500">
-                + {todays.prescriptions.length - 3} more in this session
-              </li>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 group-open:hidden">
+                Preview
+              </span>
+              <span className="hidden text-[11px] font-semibold uppercase tracking-wider text-zinc-500 group-open:inline">
+                Hide
+              </span>
+              <Link to="/log" className="btn-primary">
+                <Dumbbell size={14} /> Start
+              </Link>
+            </div>
+          </summary>
+          <div className="border-t border-ink-800 px-3 py-3">
+            <ul className="space-y-2 text-sm">
+              {todays.prescriptions.map((p, i) => (
+                <li
+                  key={p.name}
+                  className="flex items-baseline justify-between gap-2 rounded-lg border border-ink-800 bg-ink-900/40 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      {i + 1}
+                    </div>
+                    <div className="truncate text-zinc-100">{p.name}</div>
+                  </div>
+                  <div className="shrink-0 text-right text-xs text-zinc-400">
+                    <div className="text-zinc-100">
+                      {p.sets} × {p.reps}
+                    </div>
+                    <div>
+                      {p.loadLbs ? `${p.loadLbs} lb` : 'bodyweight'}
+                      {p.rpeTarget ? ` · RPE ${p.rpeTarget}` : ''}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {todays.coachNote && (
+              <div className="mt-3 rounded-lg border border-accent/30 bg-accent/5 p-2.5 text-xs italic text-zinc-200">
+                "{todays.coachNote}"
+              </div>
             )}
-          </ul>
-        </div>
+          </div>
+        </details>
       )}
 
       {/* Coach Insights — everything analysis-heavy collapses here so
@@ -461,6 +482,10 @@ export default function Dashboard() {
 
       {/* Today's meals — compact summary, links to /meals for detail. */}
       {!gymMode && <TodayMealsSummary />}
+
+      {/* Coming up this week — Core + Cardio home days listed with their
+          weekday labels (Fri / Sat / Sun). */}
+      {!gymMode && <WeekAheadCard />}
 
       {!gymMode && (
         <>
@@ -696,61 +721,15 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Today */}
-        <Card className="lg:col-span-2">
-          <SectionHeader
-            title="Today's workout"
-            subtitle={todays ? `${dayLabel[todays.day]} · ${todays.prescriptions.length} exercises` : 'Rest day'}
-            action={
-              todays && (
-                <Link to="/log" className="btn-primary">
-                  <Dumbbell size={16} /> Log Workout
-                </Link>
-              )
-            }
-          />
-          {todays ? (
-            <div className="space-y-2">
-              {todays.prescriptions.slice(0, 6).map((p) => (
-                <div
-                  key={p.name}
-                  className="flex items-center justify-between rounded-xl border border-ink-800 bg-ink-850 px-3 py-2.5"
-                >
-                  <div>
-                    <div className="text-sm font-semibold text-zinc-100">{p.name}</div>
-                    <div className="text-xs text-zinc-400">
-                      {p.sets} × {p.reps} · rest {p.restSec}s
-                      {p.rpeTarget && ` · RPE ${p.rpeTarget}`}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {p.loadLbs ? (
-                      <div className="text-sm font-semibold text-zinc-100">
-                        {p.loadLbs} lb
-                      </div>
-                    ) : (
-                      <div className="text-xs text-zinc-400">bodyweight / DB</div>
-                    )}
-                    <div className="text-[10px] uppercase tracking-wide text-zinc-500">{p.tags?.[0] ?? ''}</div>
-                  </div>
-                </div>
-              ))}
-              {todays.prescriptions.length > 6 && (
-                <Link to="/plan" className="text-xs text-accent-soft hover:text-accent">
-                  + {todays.prescriptions.length - 6} more on the plan →
-                </Link>
-              )}
-              {todays.coachNote && (
-                <div className="mt-3 text-sm text-zinc-300 italic">"{todays.coachNote}"</div>
-              )}
-            </div>
-          ) : (
-            <div className="text-zinc-400 text-sm">Today is a rest day. Walk, hydrate, hit protein.</div>
-          )}
-        </Card>
+        {/* Today's workout + Today's macros cards REMOVED — they
+            duplicate the Top focus + TodayMealsSummary already shown
+            on the Today screen. The doughnut version was also computing
+            with hungerLevel which made calories diverge by 100–150 kcal
+            from the meals page. Single source of truth now: the Today
+            screen meals/workout components. */}
 
         {/* Big 3 with live trend from logs */}
-        <Card>
+        <Card className="lg:col-span-3">
           <SectionHeader title="Big 3" subtitle="Current 1RM · live trend from logs" />
           <div className="space-y-4">
             <Lift
@@ -775,7 +754,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Body weight chart */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-3">
           <SectionHeader title="Body weight trend" subtitle="Last 30 days" />
           <div className="h-56">
             <BodyWeightChart
@@ -786,36 +765,6 @@ export default function Dashboard() {
               }))}
             />
           </div>
-        </Card>
-
-        {/* Macros */}
-        <Card>
-          <SectionHeader
-            title="Today's macros"
-            subtitle={`${meal.dayLabel} · ${meal.totals.calories} kcal`}
-          />
-          <div className="h-44">
-            <MacroDoughnut
-              protein={meal.totals.proteinG}
-              carbs={meal.totals.carbsG}
-              fat={meal.totals.fatG}
-            />
-          </div>
-          <div className="mt-4 space-y-2">
-            <ProgressBar
-              label="Protein"
-              rightLabel={`${meal.totals.proteinG} g`}
-              value={meal.totals.proteinG}
-              max={computeProteinTargetG(profile)}
-              tone="accent"
-            />
-          </div>
-          <div className="mt-3 flex items-center gap-2 text-xs text-zinc-400">
-            <Salad size={14} /> {meal.coachNote.slice(0, 100)}…
-          </div>
-          <Link to="/meals" className="mt-3 inline-block text-xs text-accent-soft hover:text-accent">
-            View today's meal plan →
-          </Link>
         </Card>
 
         {/* Weak points */}

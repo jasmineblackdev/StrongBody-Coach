@@ -16,7 +16,7 @@ export default function TodayMealsSummary() {
   const profile = store.getProfile();
   const plan = useMemo(() => {
     if (!profile) return null;
-    const isTrainingDay = ![0, 3].includes(new Date().getDay());
+    const isTrainingDay = ![5, 6, 0].includes(new Date().getDay()); // Fri/Sat/Sun home days
     return buildDailyPlan({
       profile,
       isTrainingDay,
