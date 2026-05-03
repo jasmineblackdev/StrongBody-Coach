@@ -255,6 +255,12 @@ export default function WorkoutPlanPage() {
       {activeExercise && (
         <ExerciseDetailsModal
           exerciseName={activeExercise}
+          prescription={
+            plan.sessions
+              .flatMap((s) => s.prescriptions)
+              .find((p) => p.name === activeExercise) ?? undefined
+          }
+          phase={plan.phase}
           onClose={() => setActiveExercise(null)}
         />
       )}

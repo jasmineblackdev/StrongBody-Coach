@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   X,
   Target,
@@ -10,9 +10,16 @@ import {
   ShieldAlert,
   Wand2,
   Award,
+  Compass,
+  Repeat,
+  Eye,
 } from 'lucide-react';
 import { Pill } from './ui';
 import { findExercise, hasJointWarning, type DifficultyLevel } from '../lib/exerciseLibrary';
+import { explainPrescription } from '../lib/trainerPrescription';
+import { detectWeakPoints } from '../lib/weakPoints';
+import { store } from '../lib/storage';
+import type { ExercisePrescription, TrainingPhase } from '../types';
 
 const DIFFICULTY_LABEL: Record<DifficultyLevel, string> = {
   beginner: 'Beginner',
@@ -28,11 +35,40 @@ const DIFFICULTY_TONE: Record<DifficultyLevel, 'success' | 'warning' | 'danger'>
 
 interface Props {
   exerciseName: string;
+  /**
+   * The prescription this entry was opened from. When provided, the modal
+   * shows a "Why this exercise" rationale panel built from the prescription
+   * + the user's profile + the current phase. Optional for backward compat.
+   */
+  prescription?: ExercisePrescription;
+  /** Current training phase, used to phrase the rationale. */
+  phase?: TrainingPhase;
   onClose: () => void;
 }
 
-export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
+export default function ExerciseDetailsModal({
+  exerciseName,
+  prescription,
+  phase,
+  onClose,
+}: Props) {
   const entry = findExercise(exerciseName);
+
+  // Trainer rationale — only computed when we have the prescription that
+  // was clicked (i.e., the user opened from the actual workout plan, not
+  // a name-only search). Reads profile + recent logs from the store for
+  // problem-area + weak-point linking.
+  const rationale = useMemo(() => {
+    if (!prescription) return null;
+    const profile = store.getProfile();
+    if (!profile) return null;
+    const weakPoints = detectWeakPoints(store.getLogs());
+    return explainPrescription(prescription, {
+      profile,
+      phase: phase ?? 'hypertrophy',
+      weakPoints,
+    });
+  }, [prescription, phase]);
 
   // Close on Escape
   useEffect(() => {
@@ -105,6 +141,73 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
             label={entry?.videoUrl ? 'Watch demo' : 'Watch on YouTube'}
             imageUrl={entry?.imageUrl}
           />
+
+          {/* Trainer rationale — "why this exercise was chosen". Only
+              renders when the modal was opened from a prescription on the
+              plan (not a name-only lookup). */}
+          {rationale && (
+            <div className="rounded-2xl border border-accent/30 bg-accent/5 p-4">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-rose-glow">
+                <Compass size={14} /> Why this exercise
+              </div>
+              <div className="mt-2 text-sm font-semibold leading-snug text-zinc-100">
+                {rationale.headline}
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-200">
+                {rationale.whyChosen}
+              </p>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="rounded-xl border border-ink-800 bg-ink-900/60 p-3">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                    <Target size={12} /> What it targets
+                  </div>
+                  <ul className="mt-1.5 space-y-0.5 text-sm text-zinc-200">
+                    {rationale.whatItTargets.length === 0 ? (
+                      <li className="text-zinc-500">—</li>
+                    ) : (
+                      rationale.whatItTargets.map((t, i) => <li key={i}>• {t}</li>)
+                    )}
+                  </ul>
+                </div>
+                <div className="rounded-xl border border-ink-800 bg-ink-900/60 p-3">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                    <Sparkles size={12} /> Why now
+                  </div>
+                  <p className="mt-1.5 text-sm text-zinc-200">{rationale.whyNow}</p>
+                </div>
+              </div>
+
+              {rationale.alternates.length > 0 && (
+                <div className="mt-3 rounded-xl border border-ink-800 bg-ink-900/60 p-3">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                    <Repeat size={12} /> Alternates
+                  </div>
+                  <ul className="mt-1.5 space-y-1 text-sm text-zinc-200">
+                    {rationale.alternates.map((a, i) => (
+                      <li key={i}>
+                        <span className="font-semibold text-zinc-100">{a.name}</span>
+                        <span className="text-zinc-400"> — {a.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {rationale.watchOutFor.length > 0 && (
+                <div className="mt-3 rounded-xl border border-warning/30 bg-warning/5 p-3">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-warning">
+                    <Eye size={12} /> Watch out for
+                  </div>
+                  <ul className="mt-1.5 space-y-0.5 text-sm text-zinc-200">
+                    {rationale.watchOutFor.map((w, i) => (
+                      <li key={i}>• {w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           {!entry ? (
             <div className="rounded-xl border border-ink-800 bg-ink-850 p-4 text-sm text-zinc-300">
