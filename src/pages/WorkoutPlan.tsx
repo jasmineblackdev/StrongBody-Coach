@@ -10,6 +10,7 @@ import { buildWeeklyPlan, dayLabel } from '../lib/workoutPlan';
 import { findExercise } from '../lib/exerciseLibrary';
 import { forecastAllLifts } from '../lib/ml/strengthForecaster';
 import { assessInjuryRisk, RISK_TONE } from '../lib/ml/injuryRisk';
+import { computeReadiness } from '../lib/recoveryEngine';
 import type { PlanProposal, TrainingPhase, WorkoutSession } from '../types';
 
 const PHASES: TrainingPhase[] = ['hypertrophy', 'strength', 'peak', 'deload'];
@@ -18,7 +19,11 @@ export default function WorkoutPlanPage() {
   useStoreVersion();
   const profile = store.getProfile()!;
   const logs = store.getLogs();
-  const liftForecasts = useMemo(() => forecastAllLifts(logs), [logs]);
+  const readiness = useMemo(() => computeReadiness(logs), [logs]);
+  const liftForecasts = useMemo(
+    () => forecastAllLifts(logs, 5, { recoveryScore: readiness.score }),
+    [logs, readiness.score],
+  );
   const injuryRisk = useMemo(() => assessInjuryRisk(logs), [logs]);
   const [weekNumber, setWeekNumber] = useState(store.getWeekNumber());
   const [phase, setPhase] = useState<TrainingPhase>(store.getPlan()?.phase ?? 'hypertrophy');

@@ -12,7 +12,11 @@ import { analyzeAdherenceAndPlateau, plateauTone } from '../lib/adherenceEngine'
 import { computeProteinTargetG } from '../lib/macroEngine';
 import { generateCoachSummary } from '../lib/ai/coachSummary';
 import { forecastWeight } from '../lib/ml/weightForecaster';
-import { forecastAllLifts } from '../lib/ml/strengthForecaster';
+import {
+  forecastAllLifts,
+  RECOMMENDATION_LABEL,
+  RECOMMENDATION_TONE,
+} from '../lib/ml/strengthForecaster';
 import { assessInjuryRisk, RISK_TONE } from '../lib/ml/injuryRisk';
 import { store } from '../lib/storage';
 import { detectWeakPoints } from '../lib/weakPoints';
@@ -92,7 +96,10 @@ export default function Dashboard() {
     [profile, weightTrend, readiness, liftEstimates, fatLoss],
   );
   const weightForecast = useMemo(() => forecastWeight(metrics), [metrics]);
-  const liftForecasts = useMemo(() => forecastAllLifts(logs), [logs]);
+  const liftForecasts = useMemo(
+    () => forecastAllLifts(logs, 5, { recoveryScore: readiness.score }),
+    [logs, readiness.score],
+  );
   const injuryRisk = useMemo(() => assessInjuryRisk(logs), [logs]);
   const plateau = useMemo(
     () =>
@@ -335,7 +342,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Big 3 next-session targets */}
+          {/* Big 3 next-session targets — safety-gated */}
           <div className="rounded-xl border border-ink-800 bg-ink-850 p-4">
             <div className="text-xs uppercase tracking-wider text-zinc-400">
               Next-session working sets (5 reps)
@@ -343,18 +350,30 @@ export default function Dashboard() {
             <div className="mt-2 space-y-1.5 text-sm">
               {(['squat', 'bench', 'deadlift'] as const).map((lift) => {
                 const f = liftForecasts[lift];
-                return (
-                  <div key={lift} className="flex items-center justify-between">
-                    <span className="capitalize text-zinc-300">{lift}</span>
-                    {f ? (
-                      <span className="text-zinc-100">
-                        <span className="font-semibold">{f.nextSessionTarget} lb</span>
-                        <span className="ml-1 text-xs text-zinc-500">
-                          (±{(f.confidenceBand.high - f.nextSessionTarget)} lb)
-                        </span>
-                      </span>
-                    ) : (
+                if (!f) {
+                  return (
+                    <div key={lift} className="flex items-center justify-between">
+                      <span className="capitalize text-zinc-300">{lift}</span>
                       <span className="text-xs text-zinc-500">—</span>
+                    </div>
+                  );
+                }
+                const flagged = f.safetyFlags.length > 0 || f.recommendation !== 'increase';
+                return (
+                  <div key={lift}>
+                    <div className="flex items-center justify-between">
+                      <span className="capitalize text-zinc-300">{lift}</span>
+                      <span className="flex items-center gap-2 text-zinc-100">
+                        <span className="font-semibold">{f.nextSessionTarget} lb</span>
+                        <Pill tone={RECOMMENDATION_TONE[f.recommendation]}>
+                          {RECOMMENDATION_LABEL[f.recommendation]}
+                        </Pill>
+                      </span>
+                    </div>
+                    {flagged && (
+                      <div className="mt-0.5 text-[11px] leading-tight text-zinc-400">
+                        {f.rationale}
+                      </div>
                     )}
                   </div>
                 );
