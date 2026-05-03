@@ -300,11 +300,11 @@ function SessionRow({
                 key={i}
                 type="button"
                 onClick={() => onSelectExercise(p.name)}
-                className="grid w-full grid-cols-12 items-center gap-3 rounded-xl border border-ink-800 bg-ink-850 px-3 py-2.5 text-left text-sm transition hover:border-accent/40 hover:bg-ink-800"
+                className="flex w-full flex-col gap-2 rounded-xl border border-ink-800 bg-ink-850 px-3 py-2.5 text-left text-sm transition hover:border-accent/40 hover:bg-ink-800 md:grid md:grid-cols-12 md:items-center md:gap-3"
                 title={hasDetails ? 'View exercise details' : 'Open details'}
               >
-                <div className="col-span-12 md:col-span-4">
-                  <div className="flex items-center gap-1.5">
+                <div className="md:col-span-4">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-semibold text-zinc-100">{p.name}</span>
                     {hasDetails && (
                       <Info size={12} className="shrink-0 text-rose-glow opacity-80" />
@@ -325,14 +325,28 @@ function SessionRow({
                     </div>
                   ) : null}
                 </div>
-                <div className="col-span-3 md:col-span-2 text-zinc-300">
-                  {p.sets} × {p.reps}
+
+                {/* Mobile: stats row in a tight 3-up grid; Desktop: each col separately */}
+                <div className="grid grid-cols-3 gap-2 text-xs text-zinc-300 md:contents md:text-sm">
+                  <div className="md:col-span-2">
+                    <span className="md:hidden text-[10px] uppercase tracking-wider text-zinc-500">Sets × Reps</span>
+                    <div>
+                      {p.sets} × {p.reps}
+                    </div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <span className="md:hidden text-[10px] uppercase tracking-wider text-zinc-500">Load</span>
+                    <div>{p.loadLbs ? `${p.loadLbs} lb` : '—'}</div>
+                  </div>
+                  <div className="md:col-span-1">
+                    <span className="md:hidden text-[10px] uppercase tracking-wider text-zinc-500">Rest</span>
+                    <div>{p.restSec}s</div>
+                  </div>
                 </div>
-                <div className="col-span-3 md:col-span-2 text-zinc-300">
-                  {p.loadLbs ? `${p.loadLbs} lb` : '—'}
-                </div>
-                <div className="col-span-3 md:col-span-1 text-zinc-300">{p.restSec}s</div>
-                <div className="col-span-3 md:col-span-3 text-xs text-zinc-400">{p.notes}</div>
+
+                {p.notes && (
+                  <div className="text-xs text-zinc-400 md:col-span-3">{p.notes}</div>
+                )}
               </button>
             );
           })}

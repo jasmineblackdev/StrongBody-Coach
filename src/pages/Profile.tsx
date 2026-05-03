@@ -100,7 +100,7 @@ export default function ProfilePage() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <SectionHeader title="You" />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Name">
               <input className="input" value={p.name} onChange={(e) => update('name', e.target.value)} />
             </Field>
@@ -191,7 +191,7 @@ export default function ProfilePage() {
 
         <Card>
           <SectionHeader title="Lifts" subtitle="Used to prescribe loads in your plan" />
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
             <Field label="Squat 1RM">
               <input
                 type="number"

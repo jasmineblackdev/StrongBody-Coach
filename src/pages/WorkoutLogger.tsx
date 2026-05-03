@@ -169,7 +169,8 @@ export default function WorkoutLoggerPage() {
                   </button>
                 </div>
 
-                <div className="mt-3 grid grid-cols-12 gap-2 text-xs uppercase tracking-wider text-zinc-500">
+                {/* Header row — desktop only; mobile uses inline labels per input */}
+                <div className="mt-3 hidden grid-cols-12 gap-2 text-xs uppercase tracking-wider text-zinc-500 sm:grid">
                   <div className="col-span-1">#</div>
                   <div className="col-span-3">Reps</div>
                   <div className="col-span-3">Weight</div>
@@ -177,45 +178,77 @@ export default function WorkoutLoggerPage() {
                   <div className="col-span-2">Missed</div>
                   <div className="col-span-1"></div>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2 sm:space-y-1.5">
                   {exLog.sets.map((s, setIdx) => (
-                    <div key={setIdx} className="grid grid-cols-12 items-center gap-2">
-                      <div className="col-span-1 text-sm text-zinc-400">{setIdx + 1}</div>
-                      <input
-                        type="number"
-                        className="input col-span-3"
-                        value={s.reps || ''}
-                        onChange={(e) => setSetField(exIdx, setIdx, 'reps', Number(e.target.value))}
-                        placeholder={pres.reps}
-                      />
-                      <input
-                        type="number"
-                        className="input col-span-3"
-                        value={s.weight || ''}
-                        onChange={(e) => setSetField(exIdx, setIdx, 'weight', Number(e.target.value))}
-                        placeholder={`${pres.loadLbs ?? ''}`}
-                      />
-                      <input
-                        type="number"
-                        className="input col-span-2"
-                        value={s.rpe || ''}
-                        min={1}
-                        max={10}
-                        onChange={(e) => setSetField(exIdx, setIdx, 'rpe', Number(e.target.value))}
-                        placeholder="RPE"
-                      />
-                      <label className="col-span-2 inline-flex items-center gap-2 text-xs text-zinc-400">
+                    <div
+                      key={setIdx}
+                      className="rounded-xl border border-ink-800 bg-ink-900/40 p-2 sm:grid sm:grid-cols-12 sm:items-center sm:gap-2 sm:rounded-none sm:border-none sm:bg-transparent sm:p-0"
+                    >
+                      {/* Set number — inline header on mobile, single col on desktop */}
+                      <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wider text-zinc-400 sm:col-span-1 sm:mb-0 sm:text-sm">
+                        <span>Set {setIdx + 1}</span>
+                        <button
+                          onClick={() => removeSet(exIdx, setIdx)}
+                          className="inline-flex items-center justify-center rounded-lg border border-ink-700 p-1 text-zinc-400 hover:bg-ink-800 sm:hidden"
+                          aria-label="Remove set"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+
+                      {/* Reps + Weight — side by side on mobile, individual cols on desktop */}
+                      <div className="grid grid-cols-2 gap-2 sm:contents">
+                        <label className="text-xs text-zinc-400 sm:hidden">Reps</label>
+                        <label className="text-xs text-zinc-400 sm:hidden">Weight</label>
                         <input
-                          type="checkbox"
-                          checked={!!s.missed}
-                          onChange={(e) => setSetField(exIdx, setIdx, 'missed', e.target.checked)}
-                          className="h-4 w-4 accent-pink-500"
+                          type="number"
+                          inputMode="numeric"
+                          className="input col-span-1 sm:col-span-3"
+                          value={s.reps || ''}
+                          onChange={(e) => setSetField(exIdx, setIdx, 'reps', Number(e.target.value))}
+                          placeholder={pres.reps}
                         />
-                        Missed
-                      </label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          className="input col-span-1 sm:col-span-3"
+                          value={s.weight || ''}
+                          onChange={(e) => setSetField(exIdx, setIdx, 'weight', Number(e.target.value))}
+                          placeholder={`${pres.loadLbs ?? ''}`}
+                        />
+                      </div>
+
+                      {/* RPE + Missed — side by side on mobile */}
+                      <div className="mt-2 grid grid-cols-2 gap-2 sm:contents sm:mt-0">
+                        <label className="text-xs text-zinc-400 sm:hidden">RPE</label>
+                        <span className="sm:hidden" />
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          className="input col-span-1 sm:col-span-2"
+                          value={s.rpe || ''}
+                          min={1}
+                          max={10}
+                          onChange={(e) => setSetField(exIdx, setIdx, 'rpe', Number(e.target.value))}
+                          placeholder="RPE"
+                        />
+                        <label className="col-span-1 inline-flex items-center gap-2 text-xs text-zinc-300 sm:col-span-2 sm:text-zinc-400">
+                          <input
+                            type="checkbox"
+                            checked={!!s.missed}
+                            onChange={(e) =>
+                              setSetField(exIdx, setIdx, 'missed', e.target.checked)
+                            }
+                            className="h-4 w-4 accent-pink-500"
+                          />
+                          Missed
+                        </label>
+                      </div>
+
+                      {/* Remove button — desktop column only; mobile has inline button */}
                       <button
                         onClick={() => removeSet(exIdx, setIdx)}
-                        className="col-span-1 inline-flex items-center justify-center rounded-lg border border-ink-700 p-1.5 text-zinc-400 hover:bg-ink-800"
+                        className="hidden sm:col-span-1 sm:inline-flex sm:items-center sm:justify-center sm:rounded-lg sm:border sm:border-ink-700 sm:p-1.5 sm:text-zinc-400 sm:hover:bg-ink-800"
                         aria-label="Remove set"
                       >
                         <Trash2 size={14} />

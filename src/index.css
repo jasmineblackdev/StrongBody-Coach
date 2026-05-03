@@ -8,12 +8,24 @@
 
 html, body, #root { height: 100%; }
 
+html { -webkit-text-size-adjust: 100%; }
+
 body {
   background:
     radial-gradient(1200px 600px at 100% -10%, rgba(244,63,122,0.10), transparent 60%),
     radial-gradient(900px 500px at -10% 110%, rgba(255,122,166,0.06), transparent 60%),
     #0a0a0c;
   font-feature-settings: 'cv11', 'ss01';
+  /* Prevent any stray horizontal overflow from breaking mobile layout */
+  overflow-x: hidden;
+}
+
+/* Respect iOS safe-area insets for notch/home-indicator phones */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
 }
 
 @layer components {
