@@ -34,6 +34,7 @@ import type { ReadinessReport } from './recoveryEngine';
 import type { LiftEstimate, LiftKey } from './strengthEngine';
 import type { InjuryRiskReport } from './ml/injuryRisk';
 import type { FemaleFatLossReport } from './femaleFatLossEngine';
+import type { ConfidenceReport } from './confidenceScoreEngine';
 import { computeAdherence } from './adherenceEngine';
 import { store } from './storage';
 import { buildWeeklyPlan } from './workoutPlan';
@@ -60,6 +61,17 @@ export interface WeeklyDecisionInput {
    *     blocking it (water retention, false plateau, hormonal hunger, etc.).
    */
   femaleReport?: FemaleFatLossReport;
+  /**
+   * Confidence read of the underlying data. When level === 'low', the
+   * Coach Brain refuses to recommend reduce_calories or shift_carbs and
+   * routes to log_more_data instead — calorie cuts on thin data is the
+   * most common preventable failure mode.
+   *
+   * Pain/injury already short-circuits the decision tree before this
+   * gate (mechanical signals beat data-quality signals). The confidence
+   * gate only kicks in for the food-side recommendations.
+   */
+  confidence?: ConfidenceReport;
 }
 
 interface DecisionContext extends WeeklyDecisionInput {
@@ -152,9 +164,12 @@ export function decideThisWeek(input: WeeklyDecisionInput): CoachDecision {
       return increaseSteps(ctx);
     }
 
-    // Reduce calories is the LAST resort here — and it's blockable by
-    // the female layer when water/bloat/hormones say otherwise.
+    // Reduce calories is the LAST resort here — blockable by the female
+    // layer (water/bloat/hormones) AND by low confidence (thin data).
     if (!isBlocked(ctx, 'reduce_calories')) {
+      if (ctx.confidence && ctx.confidence.level === 'low') {
+        return logMoreDataLowConfidence(ctx);
+      }
       return reduceCalories(ctx);
     }
     // Female layer is blocking the cut but didn't override — fall through
@@ -596,6 +611,35 @@ function adjustExercisesForBack(ctx: DecisionContext): CoachDecision {
     [
       'No max attempts on squat or deadlift this week.',
       'If pain persists 5+ days or radiates, see a clinician — this engine doesn\'t diagnose.',
+    ],
+  );
+}
+
+/**
+ * Specialised log_more_data that fires when the data is too thin to
+ * justify a calorie cut. Distinct from the generic logMoreData (which
+ * fires when there's barely any data at all) because here the user has
+ * SOME data but not enough to trust a subtraction.
+ */
+function logMoreDataLowConfidence(ctx: DecisionContext): CoachDecision {
+  const missingTop = ctx.confidence?.missingData?.slice(0, 2) ?? [];
+  return base(
+    ctx,
+    'log_more_data',
+    'Hold — confidence is too low to cut food',
+    `The trend is flat but the data behind it is thin. Cutting calories on low confidence is the most common preventable failure mode.${
+      missingTop.length ? ` Top gaps: ${missingTop.join(' / ')}` : ''
+    }`,
+    [
+      {
+        kind: 'behavior',
+        description:
+          'Hold targets. Tighten weigh-ins, run a fresh check-in, and re-check next week.',
+      },
+    ],
+    [
+      'Never cut food when the data is unclear — the wrong adjustment costs more than a held week.',
+      'Confidence is a guardrail, not a delay tactic. It will move with logging.',
     ],
   );
 }

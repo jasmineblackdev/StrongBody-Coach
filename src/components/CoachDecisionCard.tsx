@@ -13,9 +13,18 @@ import { computeReadiness } from '../lib/recoveryEngine';
 import { estimateAllLifts } from '../lib/strengthEngine';
 import { assessInjuryRisk } from '../lib/ml/injuryRisk';
 import { analyzeFemaleFatLoss } from '../lib/femaleFatLossEngine';
+import { computeConfidence } from '../lib/confidenceScoreEngine';
+import {
+  getPhotoSets,
+  getPhotoVersion,
+  subscribePhotos,
+} from '../lib/photoStorage';
+import { voiceForDecision } from '../lib/coachVoice';
+import ConfidenceBlock from './ConfidenceBlock';
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import type { CoachDecision } from '../types';
+import { useSyncExternalStore } from 'react';
 
 interface Props {
   /**
@@ -68,6 +77,14 @@ export function buildLatestDecision(): CoachDecision | null {
     recentLogs: logs,
     checkIns: store.getCheckIns(),
   });
+  const confidence = computeConfidence({
+    metrics,
+    recentLogs: logs,
+    checkIns: store.getCheckIns(),
+    photoSets: getPhotoSets(),
+    femaleReport,
+    injuryRisk,
+  });
   return decideThisWeek({
     profile,
     weekNumber: store.getWeekNumber(),
@@ -78,6 +95,7 @@ export function buildLatestDecision(): CoachDecision | null {
     recentLogs: logs,
     lastCheckIn,
     femaleReport,
+    confidence,
   });
 }
 
@@ -88,11 +106,38 @@ export default function CoachDecisionCard({
   hideIfEmpty = true,
 }: Props) {
   useStoreVersion();
+  // Subscribe to photo storage so the confidence read updates when
+  // photo sets are added/deleted.
+  useSyncExternalStore(subscribePhotos, () => {
+    void getPhotoVersion();
+    return null;
+  });
   const stored = useMemo(() => store.getCoachDecisions(), []);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState('');
 
   const decision = passed ?? stored[0] ?? null;
+
+  // Live confidence read for the card. Recomputed on every render so
+  // it reflects fresh metrics/check-ins after the user logs anything.
+  const confidence = useMemo(() => {
+    const metrics = store.getMetrics();
+    const logs = store.getLogs();
+    const checkIns = store.getCheckIns();
+    const femaleReport = analyzeFemaleFatLoss({
+      metrics,
+      recentLogs: logs,
+      checkIns,
+    });
+    return computeConfidence({
+      metrics,
+      recentLogs: logs,
+      checkIns,
+      photoSets: getPhotoSets(),
+      femaleReport,
+      injuryRisk: assessInjuryRisk(logs),
+    });
+  }, [stored]);
 
   if (!decision) {
     if (hideIfEmpty) return null;
@@ -147,8 +192,15 @@ export default function CoachDecisionCard({
       />
 
       <CoachMessage tone={tone} title={decision.headline} icon={<Sparkles size={18} />}>
-        {decision.reason}
+        <p>{decision.reason}</p>
+        <p className="mt-2 italic text-zinc-200/90">
+          {voiceForDecision(decision.decision, confidence.level)}
+        </p>
       </CoachMessage>
+
+      <div className="mt-4">
+        <ConfidenceBlock report={confidence} />
+      </div>
 
       {(decision.observations.whatWorked.length > 0 ||
         decision.observations.whatHeldBack.length > 0) && (

@@ -14,6 +14,9 @@ import {
   TREND_TONE,
 } from '../lib/photoIntelligenceEngine';
 import { analyzeFemaleFatLoss } from '../lib/femaleFatLossEngine';
+import { computeConfidence } from '../lib/confidenceScoreEngine';
+import { assessInjuryRisk } from '../lib/ml/injuryRisk';
+import ConfidenceBlock from './ConfidenceBlock';
 import {
   getPhotoSets,
   getPhotoVersion,
@@ -33,18 +36,27 @@ export default function PhotoIntelligencePanel() {
   const checkIns = store.getCheckIns();
   const logs = store.getLogs();
 
-  const report = useMemo(() => {
+  const { report, confidence } = useMemo(() => {
     const femaleReport = analyzeFemaleFatLoss({
       metrics,
       recentLogs: logs,
       checkIns,
     });
-    return analyzePhotoIntelligence({
+    const photoReport = analyzePhotoIntelligence({
       photoSets,
       metrics,
       checkIns,
       femaleReport,
     });
+    const conf = computeConfidence({
+      metrics,
+      recentLogs: logs,
+      checkIns,
+      photoSets,
+      femaleReport,
+      injuryRisk: assessInjuryRisk(logs),
+    });
+    return { report: photoReport, confidence: conf };
   }, [photoSets, metrics, checkIns, logs]);
 
   const tone = TREND_TONE[report.visualTrend];
@@ -72,6 +84,10 @@ export default function PhotoIntelligencePanel() {
       <CoachMessage tone={tone} title={report.shortHeadline} icon={<Sparkles size={18} />}>
         <p>{report.recommendation}</p>
       </CoachMessage>
+
+      <div className="mt-3">
+        <ConfidenceBlock report={confidence} showDetails={false} />
+      </div>
 
       {/* Measurement deltas — anchored on data, not on the photos */}
       {(report.weightDeltaLbs !== null || report.waistDeltaIn !== null) && (

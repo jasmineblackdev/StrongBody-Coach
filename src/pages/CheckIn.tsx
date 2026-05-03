@@ -18,6 +18,8 @@ import { estimateAllLifts } from '../lib/strengthEngine';
 import { assessInjuryRisk } from '../lib/ml/injuryRisk';
 import { decideThisWeek } from '../lib/weeklyDecisionEngine';
 import { analyzeFemaleFatLoss } from '../lib/femaleFatLossEngine';
+import { computeConfidence } from '../lib/confidenceScoreEngine';
+import { getPhotoSets } from '../lib/photoStorage';
 import CoachDecisionCard from '../components/CoachDecisionCard';
 import type {
   AdherenceLevel,
@@ -92,6 +94,15 @@ export default function CheckInPage() {
       // bloating land in the analysis on the same render.
       checkIns: [entry, ...checkIns],
     });
+    const injury = assessInjuryRisk(logs);
+    const confidence = computeConfidence({
+      metrics,
+      recentLogs: logs,
+      checkIns: [entry, ...checkIns],
+      photoSets: getPhotoSets(),
+      femaleReport,
+      injuryRisk: injury,
+    });
     const decision = decideThisWeek({
       profile,
       weekNumber: store.getWeekNumber(),
@@ -104,10 +115,11 @@ export default function CheckInPage() {
           deadlift: profile.deadlift1RM,
         },
       }),
-      injuryRisk: assessInjuryRisk(logs),
+      injuryRisk: injury,
       recentLogs: logs,
       lastCheckIn: entry,
       femaleReport,
+      confidence,
     });
     store.addCoachDecision(decision);
     setCoachDecision(decision);

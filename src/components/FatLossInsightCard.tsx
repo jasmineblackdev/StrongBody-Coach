@@ -6,6 +6,11 @@ import {
   FAT_LOSS_STATE_LABEL,
   type FatLossState,
 } from '../lib/femaleFatLossEngine';
+import { computeConfidence } from '../lib/confidenceScoreEngine';
+import { assessInjuryRisk } from '../lib/ml/injuryRisk';
+import { voiceForFemaleState } from '../lib/coachVoice';
+import { getPhotoSets } from '../lib/photoStorage';
+import ConfidenceBlock from './ConfidenceBlock';
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 
@@ -31,8 +36,21 @@ export default function FatLossInsightCard() {
       }),
     [],
   );
+  const confidence = useMemo(
+    () =>
+      computeConfidence({
+        metrics: store.getMetrics(),
+        recentLogs: store.getLogs(),
+        checkIns: store.getCheckIns(),
+        photoSets: getPhotoSets(),
+        femaleReport: report,
+        injuryRisk: assessInjuryRisk(store.getLogs()),
+      }),
+    [report],
+  );
 
   const Icon = STATE_ICON[report.state];
+  const voice = voiceForFemaleState(report.state);
 
   return (
     <Card className={report.tone === 'success' ? 'border-success/30' : 'border-accent/30'}>
@@ -56,8 +74,13 @@ export default function FatLossInsightCard() {
 
       <CoachMessage tone={report.tone} title={report.headline} icon={<Icon size={18} />}>
         <p>{report.explanation}</p>
+        {voice && <p className="mt-2 italic text-zinc-200/90">{voice}</p>}
         <p className="mt-2 font-semibold text-white">→ {report.recommendedAction}</p>
       </CoachMessage>
+
+      <div className="mt-3">
+        <ConfidenceBlock report={confidence} />
+      </div>
 
       {report.blockedActions.length > 0 && (
         <div className="mt-3 rounded-xl border border-warning/30 bg-warning/5 p-3 text-xs text-zinc-300">

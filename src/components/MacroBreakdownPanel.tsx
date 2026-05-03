@@ -2,6 +2,13 @@ import { useMemo } from 'react';
 import { Calculator, Info } from 'lucide-react';
 import { Card, Pill, SectionHeader } from './ui';
 import { computeMacroBreakdown } from '../lib/macroEngine';
+import { computeConfidence } from '../lib/confidenceScoreEngine';
+import { analyzeFemaleFatLoss } from '../lib/femaleFatLossEngine';
+import { assessInjuryRisk } from '../lib/ml/injuryRisk';
+import { voiceForMacroRecommendation } from '../lib/coachVoice';
+import { getPhotoSets } from '../lib/photoStorage';
+import { store } from '../lib/storage';
+import ConfidenceBlock from './ConfidenceBlock';
 import type { Profile } from '../types';
 
 const LIFESTYLE_LABEL: Record<NonNullable<Profile['lifestyleActivity']>, string> = {
@@ -26,6 +33,24 @@ const FATLOSS_MODE_LABEL = {
  */
 export default function MacroBreakdownPanel({ profile }: { profile: Profile }) {
   const b = useMemo(() => computeMacroBreakdown(profile), [profile]);
+  const confidence = useMemo(() => {
+    const metrics = store.getMetrics();
+    const logs = store.getLogs();
+    const checkIns = store.getCheckIns();
+    const femaleReport = analyzeFemaleFatLoss({
+      metrics,
+      recentLogs: logs,
+      checkIns,
+    });
+    return computeConfidence({
+      metrics,
+      recentLogs: logs,
+      checkIns,
+      photoSets: getPhotoSets(),
+      femaleReport,
+      injuryRisk: assessInjuryRisk(logs),
+    });
+  }, [profile]);
 
   const goalLabel: Record<Profile['goal'], string> = {
     fat_loss: 'Fat loss',
@@ -60,6 +85,9 @@ export default function MacroBreakdownPanel({ profile }: { profile: Profile }) {
           <Info size={12} /> Why this target
         </div>
         <p className="mt-1.5 leading-relaxed">{b.goalDeficitNote}</p>
+        <p className="mt-1.5 italic text-xs text-zinc-300">
+          {voiceForMacroRecommendation(confidence.level, profile.goal)}
+        </p>
         {b.heavyCapApplied.train && (
           <p className="mt-1 text-xs text-warning">
             Training-day target was capped at the heavy-bodyweight fat-loss ceiling
@@ -77,6 +105,10 @@ export default function MacroBreakdownPanel({ profile }: { profile: Profile }) {
           This is a starting target. Weekly trend decides future adjustments — log
           daily weight and run a /check-in once a week.
         </p>
+      </div>
+
+      <div className="mt-3">
+        <ConfidenceBlock report={confidence} />
       </div>
 
       {/* Macros table */}
