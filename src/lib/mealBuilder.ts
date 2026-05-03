@@ -438,26 +438,13 @@ export function composeMeals(args: ComposeArgs): MealItem[] {
 
     const items: ItemPortion[] = [];
 
-    // Protein anchor — scale to hit slot's protein share, capped at a
-    // realistic single-serving ceiling so we don't end up prescribing 54 g
-    // of whey isolate (2+ scoops) in one meal.
-    const protein = pickByCategory(pool, spec.proteinCategories, slot, daySeed, slotIndex);
-    if (protein) {
-      // For ultra-concentrated proteins (whey, very lean meats), keep the
-      // serving close to the default and accept a protein shortfall rather
-      // than over-scaling. The composer's other items + protein anchors in
-      // other meals close the daily target.
-      const isConcentrated = protein.per100g.p >= 30;
-      const maxMultiplier = isConcentrated ? 1.2 : 1.6;
-      items.push(
-        scaleByProtein(
-          protein,
-          slotProtein,
-          Math.round(protein.defaultServingG * 0.5),
-          Math.round(protein.defaultServingG * maxMultiplier),
-        ),
-      );
-    }
+    // Order: secondaries (carb / veg / fat) first so we can subtract
+    // their incidental protein from the primary protein's scaling target.
+    // The previous order picked primary protein first at full slotProtein,
+    // then added carb + veg + fat — each of which carries 1–10 g of
+    // incidental protein. Across 5 meals that compounded to ~25–30 g
+    // overshoot vs the daily target. Picking secondaries first lets the
+    // primary protein fill only the REMAINING gap.
 
     // Carb source — scale to hit slot's carb share, but cap at a realistic
     // serving so we don't prescribe "2.5 cup sweet potato".
@@ -486,6 +473,29 @@ export function composeMeals(args: ComposeArgs): MealItem[] {
     if (spec.fatCategories && accumulatedFat < slotFat * 0.7) {
       const fat = pickByCategory(pool, spec.fatCategories, slot, daySeed + 3, slotIndex);
       if (fat) items.push(fixedPortion(fat));
+    }
+
+    // Primary protein — scale to fill the gap between slotProtein and
+    // what we've already collected from the secondaries. unshift() so
+    // the meal name still shows the protein first.
+    const incidentalProtein = items.reduce((s, i) => s + i.proteinG, 0);
+    const proteinGap = Math.max(5, slotProtein - incidentalProtein);
+    const protein = pickByCategory(pool, spec.proteinCategories, slot, daySeed, slotIndex);
+    if (protein) {
+      // For ultra-concentrated proteins (whey, very lean meats), keep the
+      // serving close to the default and accept a protein shortfall rather
+      // than over-scaling. The composer's other items + protein anchors in
+      // other meals close the daily target.
+      const isConcentrated = protein.per100g.p >= 30;
+      const maxMultiplier = isConcentrated ? 1.2 : 1.6;
+      items.unshift(
+        scaleByProtein(
+          protein,
+          proteinGap,
+          Math.round(protein.defaultServingG * 0.5),
+          Math.round(protein.defaultServingG * maxMultiplier),
+        ),
+      );
     }
 
     const proteinG = Math.round(items.reduce((s, i) => s + i.proteinG, 0));

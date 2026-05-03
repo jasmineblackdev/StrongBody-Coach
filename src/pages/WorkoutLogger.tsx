@@ -8,6 +8,7 @@ import {
   Eye,
   Replace,
   AlertTriangle,
+  RotateCcw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
@@ -596,7 +597,36 @@ export default function WorkoutLoggerPage() {
           />
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            onClick={() => {
+              if (
+                !confirm(
+                  'Reset this workout? All sets, RPE, flags, and notes for this session will be cleared. Saved logs are not affected.',
+                )
+              ) {
+                return;
+              }
+              // Re-init exercise logs from the current session prescriptions
+              setExerciseLogs(
+                session.prescriptions.map((p) => emptyExerciseLog(p.name, p.sets)),
+              );
+              setBodyWeight(profile.weightLbs);
+              setRecoveryScore(7);
+              setHungerAfter(5);
+              setSoreness([]);
+              setNotes('');
+              setActiveFlags({});
+              setRestArmedAt(null);
+              setRestExerciseIdx(null);
+              setSavedLog(null);
+              setProposalChangeCount(null);
+            }}
+            className="btn-outline"
+            title="Clear this session's inputs (saved logs are untouched)"
+          >
+            <RotateCcw size={14} /> Reset
+          </button>
           <button onClick={save} className="btn-primary">
             <Save size={16} /> Save log & get coaching
           </button>
