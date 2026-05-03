@@ -6,6 +6,7 @@ import CloudPanel from '../components/CloudPanel';
 import TestDataPanel from '../components/TestDataPanel';
 import OneRMSuggestionPanel from '../components/OneRMSuggestionPanel';
 import ExportImportPanel from '../components/ExportImportPanel';
+import MacroBreakdownPanel from '../components/MacroBreakdownPanel';
 import { store } from '../lib/storage';
 import { buildWeeklyPlan } from '../lib/workoutPlan';
 import type { CardioPref, Goal, Profile, ProblemArea } from '../types';
@@ -117,6 +118,10 @@ export default function ProfilePage() {
           stripped from production builds entirely. */}
       {import.meta.env.DEV && <TestDataPanel />}
 
+      {/* Live macro calculation worksheet — derives BMR / TDEE / targets
+          from the in-progress profile draft as the user edits. */}
+      <MacroBreakdownPanel profile={p} />
+
       <OneRMSuggestionPanel />
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -132,6 +137,14 @@ export default function ProfilePage() {
                 className="input"
                 value={p.age}
                 onChange={(e) => update('age', Number(e.target.value))}
+              />
+            </Field>
+            <Field label="Birthday (optional, auto-updates age)">
+              <input
+                type="date"
+                className="input"
+                value={p.birthDate ?? ''}
+                onChange={(e) => update('birthDate', e.target.value || undefined)}
               />
             </Field>
             <Field label="Height (in)">

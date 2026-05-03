@@ -4,7 +4,8 @@ export const sampleProfile: Profile = {
   id: 'local-jasmine',
   name: 'Jasmine',
   sex: 'female',
-  age: 30,
+  age: 36,
+  birthDate: '1989-10-13',
   heightInches: 62,
   weightLbs: 227,
   goalWeightLbs: 165,
@@ -17,7 +18,7 @@ export const sampleProfile: Profile = {
   foodDislikes: ['cottage cheese', 'liver'],
   foodSensitivities: ['dairy (lactose)', 'high-FODMAP onions'],
   mealCount: 5,
-  cardioPref: 'low',
+  cardioPref: 'moderate',
   onWegovy: true,
   // proteinTargetG intentionally left undefined — macroEngine computes it
   // adaptively from goal + bodyweight + goal weight. Set this only as an

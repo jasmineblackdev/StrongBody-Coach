@@ -57,18 +57,71 @@ export function computeProteinTargetG(p: Profile): number {
   }
 }
 
+/**
+ * Returns age in whole years. Prefers `birthDate` (auto-updates every year)
+ * with a graceful fallback to the `age` field on the profile.
+ */
+export function computeAgeYears(p: Profile): number {
+  if (p.birthDate) {
+    const bd = new Date(p.birthDate);
+    if (!Number.isNaN(bd.getTime())) {
+      const now = new Date();
+      let age = now.getFullYear() - bd.getFullYear();
+      const m = now.getMonth() - bd.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < bd.getDate())) age -= 1;
+      if (age >= 5 && age <= 120) return age;
+    }
+  }
+  return p.age;
+}
+
 // Mifflin-St Jeor for women.
 function bmrFemale(p: Profile): number {
   const kg = p.weightLbs * 0.4536;
   const cm = p.heightInches * 2.54;
-  return 10 * kg + 6.25 * cm - 5 * p.age - 161;
+  return 10 * kg + 6.25 * cm - 5 * computeAgeYears(p) - 161;
 }
 
+/**
+ * Cardio sessions implied by the user's `cardioPref`. Used by the activity
+ * multiplier when combining with strength training days.
+ */
+function cardioDaysFromPref(pref: Profile['cardioPref']): number {
+  switch (pref) {
+    case 'high':
+      return 4;
+    case 'moderate':
+      return 2.5;
+    case 'low':
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Total weekly active days = strength training days + implied cardio days.
+ * Capped at 7.
+ */
+export function activeDaysPerWeek(p: Profile): number {
+  const train = Math.min(7, Math.max(0, p.trainingDaysPerWeek ?? 0));
+  return Math.min(7, train + cardioDaysFromPref(p.cardioPref));
+}
+
+/**
+ * Activity multiplier mapped from total weekly active days. Standard Mifflin
+ * brackets, slightly conservative at the upper end (1.7 instead of 1.725 for
+ * 6+ days) to avoid overshooting maintenance for non-athletes. Training days
+ * sit ~5% above the weekly average; rest days sit ~5% below.
+ */
 function activityMultiplier(p: Profile, isTrainingDay: boolean): number {
-  if (p.cardioPref === 'high') return isTrainingDay ? 1.6 : 1.45;
-  if (p.cardioPref === 'moderate') return isTrainingDay ? 1.55 : 1.4;
-  if (p.cardioPref === 'low') return isTrainingDay ? 1.5 : 1.35;
-  return isTrainingDay ? 1.45 : 1.3;
+  const days = activeDaysPerWeek(p);
+  let weeklyBase: number;
+  if (days <= 1) weeklyBase = 1.2;
+  else if (days <= 3) weeklyBase = 1.4;
+  else if (days <= 5) weeklyBase = 1.55;
+  else weeklyBase = 1.7;
+  return isTrainingDay ? weeklyBase + 0.05 : weeklyBase - 0.05;
 }
 
 /**
@@ -248,5 +301,102 @@ export function computeMacroTargets(input: MacroInput): MacroTargets {
     notes,
     trend: trend.trend,
     trendRateLbsPerWeek: trend.rate,
+  };
+}
+
+// ─── Profile-side calculation breakdown ─────────────────────────────────────
+// "Show your work" for the macro UI — like a nutritionist's worksheet so the
+// user can see exactly how the numbers were derived from their stats.
+
+export interface MacroBreakdown {
+  age: number;
+  bmr: number;
+  activeDays: number;
+  weeklyMultiplier: number;
+  trainingDayTdee: number;
+  restDayTdee: number;
+  goalDeficit: number;
+  trainingDayTarget: number;
+  restDayTarget: number;
+  hardFloor: number;
+  proteinG: number;
+  proteinFormula: string;
+  carbsTrainingG: number;
+  carbsRestG: number;
+  fatTrainingG: number;
+  fatRestG: number;
+}
+
+export function computeMacroBreakdown(profile: Profile): MacroBreakdown {
+  const age = computeAgeYears(profile);
+  const bmr = Math.round(bmrFemale(profile));
+  const activeDays = activeDaysPerWeek(profile);
+
+  const trainingMult = activityMultiplier(profile, true);
+  const restMult = activityMultiplier(profile, false);
+  const weeklyMultiplier = (trainingMult + restMult) / 2;
+
+  const trainingDayTdee = Math.round(bmr * trainingMult);
+  const restDayTdee = Math.round(bmr * restMult);
+
+  const goalDeficit =
+    profile.goal === 'fat_loss'
+      ? -450
+      : profile.goal === 'recomp'
+      ? -250
+      : profile.goal === 'meet_prep'
+      ? 50
+      : 0;
+
+  const hardFloor = Math.max(
+    1500,
+    Math.round(profile.weightLbs * 8),
+    Math.round(bmr * 0.85),
+  );
+  const trainingDayTarget = Math.max(hardFloor, trainingDayTdee + goalDeficit);
+  const restDayTarget = Math.max(hardFloor, restDayTdee + goalDeficit);
+
+  const proteinG = computeProteinTargetG(profile);
+  let proteinFormula: string;
+  if (profile.proteinTargetG && profile.proteinTargetG > 0) {
+    proteinFormula = `manual override (${profile.proteinTargetG} g)`;
+  } else if (profile.goal === 'fat_loss' || profile.goal === 'recomp') {
+    proteinFormula = `max(${profile.weightLbs} lb × 1.0, ${profile.goalWeightLbs} lb × 1.2)`;
+  } else if (profile.goal === 'strength' || profile.goal === 'meet_prep') {
+    proteinFormula = `${profile.weightLbs} lb × 1.0 g/lb`;
+  } else {
+    proteinFormula = `${profile.weightLbs} lb × 0.8 g/lb`;
+  }
+
+  // Carbs / fat split mirrors computeMacroTargets — 0.45 ratio on training,
+  // 0.32 on rest, 40 g fat floor.
+  const carbsTrainingG = Math.round((0.45 * trainingDayTarget) / 4);
+  const carbsRestG = Math.round((0.32 * restDayTarget) / 4);
+  const fatTrainingG = Math.max(
+    40,
+    Math.round((trainingDayTarget - proteinG * 4 - carbsTrainingG * 4) / 9),
+  );
+  const fatRestG = Math.max(
+    40,
+    Math.round((restDayTarget - proteinG * 4 - carbsRestG * 4) / 9),
+  );
+
+  return {
+    age,
+    bmr,
+    activeDays,
+    weeklyMultiplier,
+    trainingDayTdee,
+    restDayTdee,
+    goalDeficit,
+    trainingDayTarget,
+    restDayTarget,
+    hardFloor,
+    proteinG,
+    proteinFormula,
+    carbsTrainingG,
+    carbsRestG,
+    fatTrainingG,
+    fatRestG,
   };
 }

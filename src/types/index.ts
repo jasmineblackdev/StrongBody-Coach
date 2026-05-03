@@ -23,6 +23,12 @@ export interface Profile {
   name: string;
   sex: 'female' | 'male' | 'other';
   age: number;
+  /**
+   * Optional ISO birth date (YYYY-MM-DD). When set, macroEngine derives age
+   * from this so the calculation auto-updates each year. Falls back to `age`
+   * when not provided.
+   */
+  birthDate?: string;
   heightInches: number;
   weightLbs: number;
   goalWeightLbs: number;
