@@ -24,13 +24,22 @@ export interface PhotoSet {
   notes?: string;
 }
 
+// Cache the parsed array so repeated callers get the SAME reference until
+// notify() bumps the version. Critical for useSyncExternalStore — its
+// snapshot function MUST return the same reference between calls when
+// state hasn't changed, otherwise React thinks state changed every render
+// and triggers an infinite re-render loop (manifested as React error #185).
+let cachedSets: PhotoSet[] | null = null;
+
 function read(): PhotoSet[] {
+  if (cachedSets !== null) return cachedSets;
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as PhotoSet[]) : [];
+    cachedSets = raw ? (JSON.parse(raw) as PhotoSet[]) : [];
   } catch {
-    return [];
+    cachedSets = [];
   }
+  return cachedSets;
 }
 
 function write(sets: PhotoSet[]): void {
@@ -72,6 +81,10 @@ export function getPhotoVersion(): number {
 }
 
 function notify(): void {
+  // Invalidate the cache so the next read() returns fresh data with a
+  // new reference. Subscribers are notified after, so the new reference
+  // is what they observe.
+  cachedSets = null;
   version += 1;
   subscribers.forEach((fn) => fn());
 }
