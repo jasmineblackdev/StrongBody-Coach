@@ -50,8 +50,27 @@ export default function ProfilePage() {
   }
 
   function save() {
+    const previous = store.getProfile();
     store.setProfile(p);
     store.setPlan(buildWeeklyPlan(p, store.getWeekNumber(), 'hypertrophy'));
+
+    // If body weight changed, log a body metric for today so Dashboard / Progress
+    // / charts pick it up immediately. Replaces today's metric if one exists,
+    // otherwise prepends a new entry.
+    const weightChanged = !previous || previous.weightLbs !== p.weightLbs;
+    if (weightChanged) {
+      const today = new Date().toISOString().slice(0, 10);
+      const existing = store.getMetrics();
+      const todayIdx = existing.findIndex((m) => m.date === today);
+      if (todayIdx >= 0) {
+        const next = [...existing];
+        next[todayIdx] = { ...next[todayIdx], weightLbs: p.weightLbs };
+        store.setMetrics(next);
+      } else {
+        store.addMetric({ date: today, weightLbs: p.weightLbs });
+      }
+    }
+
     setSaved(true);
   }
 

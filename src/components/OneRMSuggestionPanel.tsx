@@ -43,7 +43,17 @@ export default function OneRMSuggestionPanel() {
   useStoreVersion(); // re-render on any store change
   const profile = store.getProfile()!;
   const logs = store.getLogs();
-  const estimates = useMemo(() => estimateAllLifts(logs), [logs]);
+  const estimates = useMemo(
+    () =>
+      estimateAllLifts(logs, {
+        baselines: {
+          squat: profile.squat1RM,
+          bench: profile.bench1RM,
+          deadlift: profile.deadlift1RM,
+        },
+      }),
+    [logs, profile.squat1RM, profile.bench1RM, profile.deadlift1RM],
+  );
   const [savedAll, setSavedAll] = useState(false);
   const [pending, setPending] = useState<LiftKey | null>(null);
   const lifts: LiftKey[] = ['squat', 'bench', 'deadlift'];
@@ -65,7 +75,8 @@ export default function OneRMSuggestionPanel() {
     const updates: Partial<Profile> = {};
     for (const lift of lifts) {
       const e = estimates[lift];
-      if (e.estimated1RM > 0) {
+      // Skip low-confidence estimates — only apply when the engine is sure.
+      if (e.estimated1RM > 0 && e.confidence !== 'low') {
         updates[PROFILE_KEY[lift]] = e.estimated1RM;
       }
     }
@@ -75,6 +86,9 @@ export default function OneRMSuggestionPanel() {
   }
 
   const anyEstimate = lifts.some((l) => estimates[l].estimated1RM > 0);
+  const anyApplyable = lifts.some(
+    (l) => estimates[l].estimated1RM > 0 && estimates[l].confidence !== 'low',
+  );
 
   return (
     <Card>
@@ -84,7 +98,7 @@ export default function OneRMSuggestionPanel() {
         action={
           <button
             onClick={applyAll}
-            disabled={!anyEstimate}
+            disabled={!anyApplyable}
             className="btn-primary"
           >
             <TrendingUp size={16} /> Apply all
@@ -161,6 +175,10 @@ function LiftRow({
   const isApplied = hasEstimate && current === value;
   const delta = hasEstimate ? value - current : 0;
   const ev = estimate.evidence;
+  // Low-confidence estimates (few sessions / high variance / big drop vs
+  // manual) are reported as "engine signal" and hide the Apply button.
+  const lowConfidence = estimate.confidence === 'low';
+  const showApply = hasEstimate && !isApplied && !lowConfidence;
 
   return (
     <div className="rounded-xl border border-ink-800 bg-ink-850 p-3.5">
@@ -174,6 +192,11 @@ function LiftRow({
             ) : isApplied ? (
               <Pill tone="success">
                 <Check size={12} /> matched
+              </Pill>
+            ) : lowConfidence ? (
+              <Pill tone="warning">
+                low confidence ({delta > 0 ? '+' : ''}
+                {delta} lb signal)
               </Pill>
             ) : (
               <Pill tone="accent">
@@ -210,8 +233,8 @@ function LiftRow({
         </div>
 
         <div className="flex shrink-0 gap-1.5">
-          {hasEstimate && !isApplied && (
-            isPending ? (
+          {showApply &&
+            (isPending ? (
               <>
                 <button onClick={onCancel} className="btn-outline">
                   Cancel
@@ -224,8 +247,7 @@ function LiftRow({
               <button onClick={onApply} className="btn-outline">
                 <Check size={14} /> Apply
               </button>
-            )
-          )}
+            ))}
         </div>
       </div>
 
@@ -233,6 +255,14 @@ function LiftRow({
         <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
           This will overwrite your manual {label} 1RM ({current} lb) with the engine's estimate
           ({value} lb) and rebuild your weekly plan.
+        </div>
+      )}
+
+      {hasEstimate && lowConfidence && (
+        <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+          Engine signal only — too few sessions, too much variance, or estimate dropped sharply
+          vs your manual baseline. Log a couple more sessions before treating this as a real
+          regression.
         </div>
       )}
     </div>

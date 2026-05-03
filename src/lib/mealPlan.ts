@@ -1,5 +1,6 @@
 import type { BodyMetric, DailyMealPlan, MealItem, Profile, WorkoutLog } from '../types';
 import { computeMacroTargets } from './macroEngine';
+import { composeMeals } from './mealBuilder';
 
 interface PlanContext {
   profile: Profile;
@@ -150,37 +151,50 @@ export function buildDailyPlan(ctx: PlanContext): DailyMealPlan {
     recentLogs,
   });
 
-  const meals = pickMeals(profile, isTrainingDay, profile.mealCount || 4);
+  // Compose meals dynamically from the ingredient database. Each day-of-year
+  // produces a deterministic, varied selection so meals don't repeat day to day.
+  const today = new Date();
+  const daySeed =
+    today.getFullYear() * 1000 +
+    Math.floor(
+      (today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / 86400000,
+    );
 
-  // Re-scale meal templates so totals roughly match macroEngine targets.
-  const totalP = meals.reduce((a, b) => a + b.proteinG, 0);
-  const totalC = meals.reduce((a, b) => a + b.carbsG, 0);
-  const totalF = meals.reduce((a, b) => a + b.fatG, 0);
-  const sP = totalP > 0 ? targets.proteinG / totalP : 1;
-  const sC = totalC > 0 ? targets.carbsG / totalC : 1;
-  const sF = totalF > 0 ? targets.fatG / totalF : 1;
-  const scaled = meals.map((meal) => {
-    const proteinG = Math.round(meal.proteinG * sP);
-    const carbsG = Math.round(meal.carbsG * sC);
-    const fatG = Math.round(meal.fatG * sF);
-    return {
-      ...meal,
-      proteinG,
-      carbsG,
-      fatG,
-      calories: proteinG * 4 + carbsG * 4 + fatG * 9,
-    };
+  const composed = composeMeals({
+    profile,
+    isTrainingDay,
+    targets: {
+      calories: targets.calories,
+      proteinG: targets.proteinG,
+      carbsG: targets.carbsG,
+      fatG: targets.fatG,
+    },
+    daySeed,
+    mealCount: profile.mealCount || 4,
   });
 
+  // Use composed meals if any were produced; fall back to static templates
+  // (e.g. when the ingredient pool is empty after sensitivities filter).
+  const final: MealItem[] =
+    composed.length >= (profile.mealCount || 4) - 1
+      ? composed
+      : pickMeals(profile, isTrainingDay, profile.mealCount || 4);
+
   const totals = {
-    calories: scaled.reduce((a, b) => a + b.calories, 0),
-    proteinG: scaled.reduce((a, b) => a + b.proteinG, 0),
-    carbsG: scaled.reduce((a, b) => a + b.carbsG, 0),
-    fatG: scaled.reduce((a, b) => a + b.fatG, 0),
+    calories: final.reduce((a, b) => a + b.calories, 0),
+    proteinG: final.reduce((a, b) => a + b.proteinG, 0),
+    carbsG: final.reduce((a, b) => a + b.carbsG, 0),
+    fatG: final.reduce((a, b) => a + b.fatG, 0),
   };
 
   const grocery = Array.from(
-    new Set(scaled.flatMap((meal) => meal.ingredients.map((s) => s.replace(/^\d+(\.\d+)?\s*[a-zA-Z]+\s*/, '').trim()))),
+    new Set(
+      final.flatMap((meal) =>
+        meal.ingredients.map((s) =>
+          s.replace(/^\d+(\.\d+)?\s*[a-zA-Z]+\s*/, '').trim(),
+        ),
+      ),
+    ),
   ).slice(0, 30);
 
   const baseNote = isTrainingDay
@@ -192,7 +206,7 @@ export function buildDailyPlan(ctx: PlanContext): DailyMealPlan {
     dayLabel: isTrainingDay ? 'Training Day' : 'Rest Day',
     isTrainingDay,
     totals,
-    meals: scaled,
+    meals: final,
     groceryList: grocery,
     coachNote,
   };

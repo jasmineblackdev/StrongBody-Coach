@@ -41,12 +41,24 @@ export default function Dashboard() {
   const todays = todayWorkout(weekNumber);
   const weakPoints = useMemo(() => detectWeakPoints(logs), [logs]);
   const readiness = useMemo(() => computeReadiness(logs), [logs]);
-  const liftEstimates = useMemo(() => estimateAllLifts(logs), [logs]);
+  const liftEstimates = useMemo(
+    () =>
+      estimateAllLifts(logs, {
+        baselines: {
+          squat: profile?.squat1RM,
+          bench: profile?.bench1RM,
+          deadlift: profile?.deadlift1RM,
+        },
+      }),
+    [logs, profile?.squat1RM, profile?.bench1RM, profile?.deadlift1RM],
+  );
 
   if (!profile || !plan) return null;
 
   const sortedMetrics = [...metrics].sort((a, b) => a.date.localeCompare(b.date));
-  const lastWeight = sortedMetrics[sortedMetrics.length - 1]?.weightLbs ?? profile.weightLbs;
+  // Profile is the source of truth for "current" body weight.
+  // Metrics drive the trend chart and history.
+  const lastWeight = profile.weightLbs;
   const firstWeight = sortedMetrics[0]?.weightLbs ?? profile.weightLbs;
   const weightDelta = +(lastWeight - firstWeight).toFixed(1);
 

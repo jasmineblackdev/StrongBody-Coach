@@ -14,16 +14,29 @@ export interface SetEvidence {
   estimate: number;
 }
 
+export type EstimateConfidence = 'low' | 'medium' | 'high';
+
 export interface LiftEstimate {
   lift: LiftKey;
-  /** Rounded 1RM estimate (lb). 0 when no usable evidence exists. */
+  /**
+   * Smoothed 1RM estimate (lb): mean of the last 3 sessions' best estimates,
+   * not just the newest session. 0 when no usable evidence exists.
+   */
   estimated1RM: number;
   trend: StrengthTrend;
-  /** The specific set that produced the current best estimate. */
+  /** The specific set that produced the most recent session's best estimate. */
   evidence: SetEvidence | null;
   /** Per-session best estimates, oldest → newest, last 5. */
   history: { date: string; estimate: number }[];
   sessionsAnalyzed: number;
+  /**
+   * How much to trust the estimate:
+   * - 'low'  — too few sessions, high variance, or large drop vs manual baseline
+   * - 'medium' — 2 sessions, no big drop
+   * - 'high' — 3+ stable sessions
+   * UI uses this to decide whether to surface an Apply button.
+   */
+  confidence: EstimateConfidence;
 }
 
 const PATTERNS: Record<LiftKey, RegExp> = {
@@ -64,7 +77,9 @@ function sessionBest(ex: ExerciseLog): { estimate: number; set: SetLog | null } 
 }
 
 function computeTrend(estimatesNewestFirst: number[]): StrengthTrend {
-  if (estimatesNewestFirst.length < 2) return 'unknown';
+  // Require 3+ sessions before we'll classify a direction. Two sessions is
+  // not enough signal — one bad/great day flips the result.
+  if (estimatesNewestFirst.length < 3) return 'unknown';
   const newest = estimatesNewestFirst[0];
   const prior = estimatesNewestFirst.slice(1);
   const priorAvg = prior.reduce((s, n) => s + n, 0) / prior.length;
@@ -76,9 +91,52 @@ function computeTrend(estimatesNewestFirst: number[]): StrengthTrend {
   return 'flat';
 }
 
+/** Mean of the last `window` session estimates (newest first). */
+function smoothedEstimate(estimatesNewestFirst: number[], window = 3): number {
+  if (!estimatesNewestFirst.length) return 0;
+  const slice = estimatesNewestFirst.slice(0, window);
+  const sum = slice.reduce((s, n) => s + n, 0);
+  return Math.round(sum / slice.length);
+}
+
+function computeConfidence(
+  estimatesNewestFirst: number[],
+  manualBaseline?: number,
+): EstimateConfidence {
+  const n = estimatesNewestFirst.length;
+  if (n === 0) return 'low';
+  if (n === 1) return 'low';
+
+  // Variance check: if the spread between max/min in the last 3 is >15%,
+  // the lift is too noisy to trust.
+  const recent = estimatesNewestFirst.slice(0, 3);
+  if (recent.length >= 2) {
+    const max = Math.max(...recent);
+    const min = Math.min(...recent);
+    if (max > 0 && (max - min) / max > 0.15) return 'low';
+  }
+
+  // Drop check: if the smoothed estimate is more than 15% below the manual
+  // baseline, treat as low confidence — likely a one-off bad block, not a
+  // genuine 50-lb regression we want to confidently apply.
+  const smoothed = smoothedEstimate(estimatesNewestFirst);
+  if (manualBaseline && manualBaseline > 0 && smoothed > 0) {
+    const drop = (manualBaseline - smoothed) / manualBaseline;
+    if (drop > 0.15) return 'low';
+  }
+
+  if (n === 2) return 'medium';
+  return 'high';
+}
+
 export interface EstimateOptions {
   /** Max sessions to analyze (newest first). Default 5. */
   sessionLimit?: number;
+  /**
+   * The manually-set 1RM from profile, used to gauge confidence when the
+   * engine's estimate is much lower than what the user has been training at.
+   */
+  manualBaseline?: number;
 }
 
 export function estimateLift(
@@ -120,26 +178,42 @@ export function estimateLift(
   }
 
   const newest = evidence[0] ?? null;
-  const trend = computeTrend(evidence.map((e) => e.estimate));
+  const estimatesNewestFirst = evidence.map((e) => e.estimate);
+  const trend = computeTrend(estimatesNewestFirst);
+  const smoothed = smoothedEstimate(estimatesNewestFirst);
+  const confidence = computeConfidence(estimatesNewestFirst, opts.manualBaseline);
   const history = evidence
     .map((e) => ({ date: e.date, estimate: e.estimate }))
     .reverse(); // oldest → newest for chart-friendliness
 
   return {
     lift,
-    estimated1RM: newest?.estimate ?? 0,
+    estimated1RM: smoothed,
     trend,
     evidence: newest,
     history,
     sessionsAnalyzed: evidence.length,
+    confidence,
   };
 }
 
-export function estimateAllLifts(logs: WorkoutLog[]): Record<LiftKey, LiftEstimate> {
+export interface EstimateAllOptions {
+  /**
+   * Optional manual baselines per lift. When provided, the engine factors them
+   * into the confidence calculation (large drops reduce confidence).
+   */
+  baselines?: Partial<Record<LiftKey, number>>;
+}
+
+export function estimateAllLifts(
+  logs: WorkoutLog[],
+  options: EstimateAllOptions = {},
+): Record<LiftKey, LiftEstimate> {
+  const { baselines = {} } = options;
   return {
-    squat: estimateLift(logs, 'squat'),
-    bench: estimateLift(logs, 'bench'),
-    deadlift: estimateLift(logs, 'deadlift'),
+    squat: estimateLift(logs, 'squat', { manualBaseline: baselines.squat }),
+    bench: estimateLift(logs, 'bench', { manualBaseline: baselines.bench }),
+    deadlift: estimateLift(logs, 'deadlift', { manualBaseline: baselines.deadlift }),
   };
 }
 
