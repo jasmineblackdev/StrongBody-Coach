@@ -16,13 +16,16 @@ export const sampleProfile: Profile = {
   problemAreas: ['core', 'glutes', 'lower_back', 'grip', 'belly_bloat'],
   foodDislikes: ['cottage cheese', 'liver'],
   foodSensitivities: ['dairy (lactose)', 'high-FODMAP onions'],
-  mealCount: 4,
+  mealCount: 5,
   cardioPref: 'low',
   onWegovy: true,
   // proteinTargetG intentionally left undefined — macroEngine computes it
   // adaptively from goal + bodyweight + goal weight. Set this only as an
   // explicit override.
   proteinTargetG: undefined,
+  // Meal + workout schedule drives time-aware macro distribution.
+  mealTimes: ['07:30', '10:30', '13:00', '15:30', '20:00'],
+  workoutTime: '18:00',
   createdAt: new Date().toISOString(),
 };
 

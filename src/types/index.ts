@@ -38,6 +38,16 @@ export interface Profile {
   cardioPref: CardioPref;
   onWegovy: boolean;
   proteinTargetG?: number;
+  /**
+   * Meal times in 24-hour HH:MM, ordered. Used by the meal composer to assign
+   * each meal a contextual slot (breakfast / mid_morning / pre_workout / etc.)
+   * and to time-shift carbs around the workout window.
+   */
+  mealTimes?: string[];
+  /**
+   * Workout time in 24-hour HH:MM. Drives pre/post-workout meal shaping.
+   */
+  workoutTime?: string;
   createdAt: string;
 }
 

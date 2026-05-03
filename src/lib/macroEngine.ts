@@ -108,6 +108,18 @@ export function weeklyWeightTrend(
   return { rate: rounded, trend, samples: series.length };
 }
 
+/** "18:00" → "6 PM", "07:30" → "7:30 AM". Returns null on bad input. */
+function formatTimeDisplay(time: string): string | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(time);
+  if (!m) return null;
+  const h24 = Number(m[1]);
+  const min = Number(m[2]);
+  if (h24 < 0 || h24 > 23 || min < 0 || min > 59) return null;
+  const period = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = h24 % 12 || 12;
+  return min === 0 ? `${h12} ${period}` : `${h12}:${m[2]} ${period}`;
+}
+
 function recentAvgHunger(logs?: WorkoutLog[], lookback = 3): number {
   if (!logs?.length) return 0;
   const recent = [...logs].sort((a, b) => b.date.localeCompare(a.date)).slice(0, lookback);
@@ -188,6 +200,19 @@ export function computeMacroTargets(input: MacroInput): MacroTargets {
     notes.push(
       `Avg hunger after recent training is ${avgHunger.toFixed(1)}/10 — keeping carbs around the workout window.`,
     );
+  }
+
+  // ─── Time-of-workout context (training days only) ──────────────────────
+  if (isTrainingDay && profile.workoutTime) {
+    const display = formatTimeDisplay(profile.workoutTime);
+    if (display) {
+      notes.push(
+        `Fueling your ${display} workout — carbs shifted to the pre-workout meal (~90 min prior).`,
+      );
+      notes.push(
+        'Post-workout meal is the highest-protein, moderate-carb meal of the day — optimized for muscle retention.',
+      );
+    }
   }
 
   // Bodyweight-aware floor: never crash-diet. Floor scales with bodyweight so

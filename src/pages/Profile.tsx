@@ -281,6 +281,32 @@ export default function ProfilePage() {
                 }
               />
             </Field>
+
+            <Field label="Workout time (HH:MM, 24h)">
+              <input
+                type="time"
+                className="input"
+                value={p.workoutTime ?? ''}
+                onChange={(e) => update('workoutTime', e.target.value || undefined)}
+              />
+            </Field>
+
+            <Field label="Meal times (comma, 24h)" className="md:col-span-2">
+              <input
+                className="input"
+                placeholder="07:30, 10:30, 13:00, 15:30, 20:00"
+                value={(p.mealTimes ?? []).join(', ')}
+                onChange={(e) =>
+                  update(
+                    'mealTimes',
+                    e.target.value
+                      .split(',')
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  )
+                }
+              />
+            </Field>
           </div>
         </Card>
       </div>
