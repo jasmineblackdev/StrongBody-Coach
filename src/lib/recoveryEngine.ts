@@ -1,6 +1,6 @@
 // Rule-based readiness scoring across the last N sessions.
 
-import type { WorkoutLog } from '../types';
+import type { ExerciseLog, SetLog, WorkoutLog } from '../types';
 
 export type Readiness = 'high' | 'moderate' | 'low';
 export type ReadinessSuggestion = 'push' | 'maintain' | 'reduce' | 'deload';
@@ -20,10 +20,12 @@ export interface ReadinessReport {
   reasons: string[];
 }
 
+// M2 fix: with no training data we don't actually KNOW readiness — defaulting
+// to "Push 100/100" was misleading. Default to "Maintain" with a clear note.
 const NEUTRAL: ReadinessReport = {
-  readiness: 'high',
-  suggestion: 'push',
-  score: 100,
+  readiness: 'moderate',
+  suggestion: 'maintain',
+  score: 70,
   metrics: {
     avgRecovery: 0,
     missedRepRatio: 0,
@@ -32,9 +34,21 @@ const NEUTRAL: ReadinessReport = {
     sessionsAnalyzed: 0,
   },
   reasons: [
-    'No recent training data — start fresh and log honest RPE so this gets useful.',
+    'No recent training data — log a few sessions with honest RPE so this gets useful.',
   ],
 };
+
+/**
+ * M3 fix: working sets only. Filters out warmups so a session with light
+ * warmups + RPE 9 working sets isn't averaged down to RPE 7. Heuristic:
+ * any set at ≥70% of the heaviest weight in that exercise is "working".
+ */
+function workingSets(ex: ExerciseLog): SetLog[] {
+  const maxWeight = Math.max(0, ...ex.sets.map((s) => s.weight));
+  if (maxWeight === 0) return ex.sets;
+  const threshold = maxWeight * 0.7;
+  return ex.sets.filter((s) => s.weight >= threshold);
+}
 
 export function computeReadiness(logs: WorkoutLog[], lookback = 5): ReadinessReport {
   const recent = [...logs]
@@ -50,11 +64,19 @@ export function computeReadiness(logs: WorkoutLog[], lookback = 5): ReadinessRep
     ? recoveries.reduce((s, n) => s + n, 0) / recoveries.length
     : 0;
 
+  // M3 fix: split warmup vs working sets so RPE averaging reflects actual
+  // training stress, not session-wide dilution.
+  const workingSetsAcrossSessions = recent.flatMap((l) =>
+    l.exercises.flatMap((e) => workingSets(e)),
+  );
   const allSets = recent.flatMap((l) => l.exercises.flatMap((e) => e.sets));
+
+  // Missed-rep ratio uses ALL sets — a missed warmup is still a real signal.
   const missedCount = allSets.filter((s) => s.missed).length;
   const missedRepRatio = allSets.length ? missedCount / allSets.length : 0;
 
-  const rpes = allSets
+  // RPE averaging uses working sets only.
+  const rpes = workingSetsAcrossSessions
     .map((s) => s.rpe)
     .filter((n): n is number => typeof n === 'number' && n > 0);
   const avgRpe = rpes.length ? rpes.reduce((s, n) => s + n, 0) / rpes.length : 0;

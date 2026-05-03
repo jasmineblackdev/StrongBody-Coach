@@ -298,11 +298,23 @@ export function computeMacroTargets(input: MacroInput): MacroTargets {
   // unless the user has explicitly set a manual value on their profile.
   const proteinG = computeProteinTargetG(profile);
   const proteinCals = proteinG * 4;
+
   const carbsRatio = isTrainingDay ? 0.45 : 0.32;
   let carbsG = Math.round((carbsRatio * calories) / 4) + extraCarbsG;
-  const carbCals = carbsG * 4;
-  const fatCals = Math.max(0, calories - proteinCals - carbCals);
-  const fatG = Math.max(40, Math.round(fatCals / 9));
+  let fatCals = Math.max(0, calories - proteinCals - carbsG * 4);
+  let fatG = Math.round(fatCals / 9);
+
+  // M6 fix: when fat would fall below the 40 g floor, the previous code just
+  // bumped fat up to 40 g — which made daily totals exceed the calorie target
+  // by ~10%, eating into the deficit. Now we dial carbs back to make room
+  // for the fat floor, keeping totals at the target.
+  const FAT_FLOOR_G = 40;
+  if (fatG < FAT_FLOOR_G) {
+    const carbsMaxCals = Math.max(0, calories - proteinCals - FAT_FLOOR_G * 9);
+    carbsG = Math.max(0, Math.floor(carbsMaxCals / 4));
+    fatCals = Math.max(0, calories - proteinCals - carbsG * 4);
+    fatG = Math.max(FAT_FLOOR_G, Math.round(fatCals / 9));
+  }
 
   return {
     calories,

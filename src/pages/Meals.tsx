@@ -7,12 +7,23 @@ import { buildDailyPlan } from '../lib/mealPlan';
 import { computeProteinTargetG } from '../lib/macroEngine';
 import { generateMealNarrative } from '../lib/ai/mealAi';
 
+/**
+ * M5 fix: derive default "is today a training day" from day-of-week +
+ * the user's training frequency, instead of always assuming Yes. Matches
+ * the same heuristic used elsewhere (rest days = Sunday + Wednesday for
+ * the typical 4–5 day split).
+ */
+function defaultTrainingDay(): boolean {
+  const dow = new Date().getDay(); // 0 = Sun, 3 = Wed
+  return ![0, 3].includes(dow);
+}
+
 export default function MealsPage() {
   useStoreVersion();
   const profile = store.getProfile()!;
   const metrics = store.getMetrics();
   const logs = store.getLogs();
-  const [isTrainingDay, setIsTrainingDay] = useState(true);
+  const [isTrainingDay, setIsTrainingDay] = useState<boolean>(defaultTrainingDay);
   const [hunger, setHunger] = useState(5);
   const plan = useMemo(
     () =>

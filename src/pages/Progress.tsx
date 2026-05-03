@@ -82,8 +82,18 @@ export default function ProgressPage() {
 
   function logMetric() {
     if (!newMetric.weightLbs && !newMetric.waistIn) return;
-    store.addMetric(newMetric);
-    // Store mutation triggers re-render via useStoreVersion — no reload needed.
+    // M7 fix: dedup by date — logging twice on the same day replaces the
+    // existing entry instead of stacking duplicates that would skew the
+    // 7-day average and trend math.
+    const existing = store.getMetrics();
+    const idx = existing.findIndex((m) => m.date === newMetric.date);
+    if (idx >= 0) {
+      const next = [...existing];
+      next[idx] = { ...next[idx], ...newMetric };
+      store.setMetrics(next);
+    } else {
+      store.addMetric(newMetric);
+    }
     setNewMetric({ ...newMetric, notes: '' });
   }
 

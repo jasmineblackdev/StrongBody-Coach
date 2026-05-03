@@ -64,7 +64,7 @@ export const sampleLogs: WorkoutLog[] = [
     date: daysAgo(2),
     day: 'squat',
     weekNumber: 1,
-    bodyWeightLbs: 168,
+    bodyWeightLbs: 227,
     sorenessAreas: ['lower_back'],
     recoveryScore: 6,
     hungerAfter: 8,
@@ -96,7 +96,7 @@ export const sampleLogs: WorkoutLog[] = [
     date: daysAgo(4),
     day: 'bench',
     weekNumber: 1,
-    bodyWeightLbs: 169,
+    bodyWeightLbs: 227,
     recoveryScore: 7,
     hungerAfter: 6,
     exercises: [
@@ -116,7 +116,7 @@ export const sampleLogs: WorkoutLog[] = [
     date: daysAgo(6),
     day: 'deadlift',
     weekNumber: 1,
-    bodyWeightLbs: 169,
+    bodyWeightLbs: 227,
     recoveryScore: 7,
     exercises: [
       {
