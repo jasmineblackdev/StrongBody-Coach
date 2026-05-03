@@ -4,6 +4,7 @@ import { Card, CoachMessage, Pill, ProgressBar, SectionHeader } from '../compone
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import { buildDailyPlan } from '../lib/mealPlan';
+import { computeProteinTargetG } from '../lib/macroEngine';
 import { generateMealNarrative } from '../lib/ai/mealAi';
 
 export default function MealsPage() {
@@ -24,7 +25,7 @@ export default function MealsPage() {
       }),
     [profile, isTrainingDay, hunger, metrics, logs],
   );
-  const proteinTarget = profile.proteinTargetG ?? Math.round(profile.weightLbs * 0.9);
+  const proteinTarget = computeProteinTargetG(profile);
 
   return (
     <div className="space-y-6">

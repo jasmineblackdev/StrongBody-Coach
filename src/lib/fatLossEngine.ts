@@ -9,6 +9,7 @@
 //   - Adjust at most every 7 days unless a serious flag fires
 
 import type { BodyMetric, Profile, WeeklyCheckIn, WorkoutLog } from '../types';
+import { computeProteinTargetG } from './macroEngine';
 import { computeReadiness, type ReadinessReport } from './recoveryEngine';
 import { estimateAllLifts, type LiftEstimate, type StrengthTrend } from './strengthEngine';
 import { computeWeightTrend, type WeightTrendReport } from './weightTrendEngine';
@@ -157,8 +158,8 @@ export function analyzeFatLoss(input: AnalysisInput): FatLossAnalysis {
       recs.push({
         kind: 'add_protein',
         headline: 'Slow it down — too fast',
-        body: `Losing ${rate.toFixed(1)} lb/wk is too aggressive — you'll lose muscle. Hold protein at ${Math.round(
-          profile.weightLbs * 0.9,
+        body: `Losing ${rate.toFixed(1)} lb/wk is too aggressive — you'll lose muscle. Hold protein at ${computeProteinTargetG(
+          profile,
         )}g+ and add 100 kcal back if hunger is climbing.`,
         delta: 100,
       });

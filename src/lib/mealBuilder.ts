@@ -56,13 +56,13 @@ export const INGREDIENTS: Ingredient[] = [
   // Lean proteins
   { name: 'Grilled chicken breast', category: 'lean_protein', per100g: { p: 31, c: 0, f: 3.6 }, defaultServingG: 170, displayUnit: 'oz', tags: ['low-bloat', 'training-friendly', 'rest-friendly', 'lunch-ok', 'dinner-ok'] },
   { name: '99% lean ground turkey', category: 'lean_protein', per100g: { p: 27, c: 0, f: 1, },  defaultServingG: 150, displayUnit: 'oz', tags: ['low-bloat', 'rest-friendly', 'lunch-ok', 'dinner-ok'] },
-  { name: 'White fish (cod, tilapia)', category: 'lean_protein', per100g: { p: 24, c: 0, f: 1.5 }, defaultServingG: 170, displayUnit: 'oz', tags: ['low-bloat', 'rest-friendly', 'dinner-ok'] },
+  { name: 'White fish (cod, tilapia)', category: 'lean_protein', per100g: { p: 24, c: 0, f: 1.5 }, defaultServingG: 170, displayUnit: 'oz', tags: ['low-bloat', 'rest-friendly', 'lunch-ok', 'dinner-ok'] },
   { name: 'Top sirloin (lean)', category: 'lean_protein', per100g: { p: 29, c: 0, f: 8 }, defaultServingG: 140, displayUnit: 'oz', tags: ['training-friendly', 'lunch-ok', 'dinner-ok'] },
   { name: 'Shrimp', category: 'lean_protein', per100g: { p: 24, c: 0, f: 1 }, defaultServingG: 170, displayUnit: 'oz', tags: ['low-bloat', 'training-friendly', 'rest-friendly', 'lunch-ok', 'dinner-ok'] },
   { name: 'Egg whites', category: 'lean_protein', per100g: { p: 11, c: 0.7, f: 0.2 }, defaultServingG: 150, displayUnit: 'cup', tags: ['low-bloat', 'breakfast-ok'] },
 
   // Fattier proteins (use sparingly)
-  { name: 'Salmon', category: 'fatty_protein', per100g: { p: 25, c: 0, f: 13 }, defaultServingG: 140, displayUnit: 'oz', tags: ['rest-friendly', 'dinner-ok'] },
+  { name: 'Salmon', category: 'fatty_protein', per100g: { p: 25, c: 0, f: 13 }, defaultServingG: 140, displayUnit: 'oz', tags: ['rest-friendly', 'lunch-ok', 'dinner-ok'] },
   { name: 'Whole eggs', category: 'fatty_protein', per100g: { p: 13, c: 1.1, f: 11 }, defaultServingG: 100, displayUnit: 'piece', tags: ['low-bloat', 'breakfast-ok', 'wegovy-easy'] },
 
   // Plant proteins
@@ -70,7 +70,7 @@ export const INGREDIENTS: Ingredient[] = [
 
   // Dairy proteins
   { name: 'Non-fat Greek yogurt (lactose-free)', category: 'dairy_protein', per100g: { p: 10, c: 4, f: 0 }, defaultServingG: 200, displayUnit: 'cup', tags: ['low-bloat', 'breakfast-ok', 'snack-ok', 'wegovy-easy'], contains: ['dairy'] },
-  { name: 'Whey isolate', category: 'dairy_protein', per100g: { p: 90, c: 2, f: 1 }, defaultServingG: 30, displayUnit: 'g', tags: ['low-bloat', 'wegovy-easy', 'snack-ok'], contains: ['whey'] },
+  { name: 'Whey isolate', category: 'dairy_protein', per100g: { p: 90, c: 2, f: 1 }, defaultServingG: 30, displayUnit: 'g', tags: ['low-bloat', 'wegovy-easy', 'breakfast-ok', 'snack-ok'], contains: ['whey'] },
 
   // Starchy carbs
   { name: 'Jasmine rice (cooked)', category: 'starchy_carb', per100g: { p: 2.7, c: 28, f: 0.3 }, defaultServingG: 150, displayUnit: 'cup', tags: ['low-bloat', 'training-friendly', 'lunch-ok', 'dinner-ok'] },
@@ -174,11 +174,23 @@ function passesSensitivities(food: Ingredient, profile: Profile): boolean {
 function pickByCategory(
   pool: Ingredient[],
   categories: FoodCategory[],
+  slot: Slot,
   daySeed: number,
   slotIndex: number,
 ): Ingredient | null {
+  const slotTag = `${slot}-ok` as FoodTag;
   for (const cat of categories) {
-    const candidates = pool.filter((f) => f.category === cat);
+    // Strict slot filter: only foods explicitly tagged for this slot are
+    // eligible, so we can't end up with rice cakes for lunch or sweet potato
+    // for breakfast. Foods without ANY slot tag are treated as universal.
+    const candidates = pool.filter((f) => {
+      if (f.category !== cat) return false;
+      const hasAnySlotTag = f.tags.some((t) =>
+        ['breakfast-ok', 'lunch-ok', 'dinner-ok', 'snack-ok'].includes(t),
+      );
+      if (!hasAnySlotTag) return true; // universal (e.g., olive oil)
+      return f.tags.includes(slotTag);
+    });
     if (candidates.length === 0) continue;
     // Deterministic rotation: shift by daySeed and slotIndex so meals vary
     // day to day but stay reproducible for any given (day, slot, category).
@@ -297,29 +309,38 @@ export function composeMeals(args: ComposeArgs): MealItem[] {
 
     const items: ItemPortion[] = [];
 
-    // Protein anchor — scale to hit slot's protein share
-    const protein = pickByCategory(pool, spec.proteinCategories, daySeed, slotIndex);
+    // Protein anchor — scale to hit slot's protein share, capped at a
+    // realistic single-serving ceiling so we don't end up prescribing 54 g
+    // of whey isolate (2+ scoops) in one meal.
+    const protein = pickByCategory(pool, spec.proteinCategories, slot, daySeed, slotIndex);
     if (protein) {
+      // For ultra-concentrated proteins (whey, very lean meats), keep the
+      // serving close to the default and accept a protein shortfall rather
+      // than over-scaling. The composer's other items + protein anchors in
+      // other meals close the daily target.
+      const isConcentrated = protein.per100g.p >= 30;
+      const maxMultiplier = isConcentrated ? 1.2 : 1.6;
       items.push(
         scaleByProtein(
           protein,
           slotProtein,
-          Math.round(protein.defaultServingG * 0.4),
-          Math.round(protein.defaultServingG * 1.8),
+          Math.round(protein.defaultServingG * 0.5),
+          Math.round(protein.defaultServingG * maxMultiplier),
         ),
       );
     }
 
-    // Carb source — scale to hit slot's carb share
+    // Carb source — scale to hit slot's carb share, but cap at a realistic
+    // serving so we don't prescribe "2.5 cup sweet potato".
     if (spec.carbCategories) {
-      const carb = pickByCategory(pool, spec.carbCategories, daySeed + 1, slotIndex);
+      const carb = pickByCategory(pool, spec.carbCategories, slot, daySeed + 1, slotIndex);
       if (carb) {
         items.push(
           scaleByCarbs(
             carb,
             slotCarbs,
-            Math.round(carb.defaultServingG * 0.5),
-            Math.round(carb.defaultServingG * 1.7),
+            Math.round(carb.defaultServingG * 0.6),
+            Math.round(carb.defaultServingG * 1.4),
           ),
         );
       }
@@ -327,14 +348,14 @@ export function composeMeals(args: ComposeArgs): MealItem[] {
 
     // Veg — fixed serving (mostly free macros)
     if (spec.vegCategories) {
-      const veg = pickByCategory(pool, spec.vegCategories, daySeed + 2, slotIndex);
+      const veg = pickByCategory(pool, spec.vegCategories, slot, daySeed + 2, slotIndex);
       if (veg) items.push(fixedPortion(veg));
     }
 
     // Fat — only if slot's fat share isn't already covered by other items
     const accumulatedFat = items.reduce((s, i) => s + i.fatG, 0);
     if (spec.fatCategories && accumulatedFat < slotFat * 0.7) {
-      const fat = pickByCategory(pool, spec.fatCategories, daySeed + 3, slotIndex);
+      const fat = pickByCategory(pool, spec.fatCategories, slot, daySeed + 3, slotIndex);
       if (fat) items.push(fixedPortion(fat));
     }
 

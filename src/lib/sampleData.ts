@@ -19,7 +19,10 @@ export const sampleProfile: Profile = {
   mealCount: 4,
   cardioPref: 'low',
   onWegovy: true,
-  proteinTargetG: 200,
+  // proteinTargetG intentionally left undefined — macroEngine computes it
+  // adaptively from goal + bodyweight + goal weight. Set this only as an
+  // explicit override.
+  proteinTargetG: undefined,
   createdAt: new Date().toISOString(),
 };
 

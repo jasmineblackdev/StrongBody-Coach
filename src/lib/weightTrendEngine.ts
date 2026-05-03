@@ -3,6 +3,7 @@
 // decisions.
 
 import type { BodyMetric, Profile } from '../types';
+import { computeProteinTargetG } from './macroEngine';
 
 export type WeightDirection = 'losing' | 'stable' | 'gaining' | 'unknown';
 export type WeightConfidence = 'low' | 'medium' | 'high';
@@ -108,8 +109,8 @@ export function computeWeightTrend(
   }
   if (trend === 'losing' && Math.abs(weeklyChange) > 2) {
     notes.push(
-      `Losing ${Math.abs(weeklyChange)} lb/wk is fast — protect muscle by holding protein high (${Math.round(
-        profile.weightLbs * 0.9,
+      `Losing ${Math.abs(weeklyChange)} lb/wk is fast — protect muscle by holding protein high (${computeProteinTargetG(
+        profile,
       )}g+) and don't cut more.`,
     );
   }

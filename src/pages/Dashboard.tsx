@@ -8,6 +8,7 @@ import { computeReadiness, READINESS_TONE, SUGGESTION_COPY } from '../lib/recove
 import { estimateAllLifts, TREND_LABEL, type StrengthTrend } from '../lib/strengthEngine';
 import { computeWeightTrend } from '../lib/weightTrendEngine';
 import { analyzeFatLoss, recommendationTone } from '../lib/fatLossEngine';
+import { computeProteinTargetG } from '../lib/macroEngine';
 import { generateCoachSummary } from '../lib/ai/coachSummary';
 import { forecastWeight } from '../lib/ml/weightForecaster';
 import { forecastAllLifts } from '../lib/ml/strengthForecaster';
@@ -476,7 +477,7 @@ export default function Dashboard() {
               label="Protein"
               rightLabel={`${meal.totals.proteinG} g`}
               value={meal.totals.proteinG}
-              max={profile.proteinTargetG ?? Math.round(profile.weightLbs * 0.9)}
+              max={computeProteinTargetG(profile)}
               tone="accent"
             />
           </div>

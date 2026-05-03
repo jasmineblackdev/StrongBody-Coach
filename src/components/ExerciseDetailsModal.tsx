@@ -49,7 +49,7 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm md:items-center"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/70 px-0 py-0 backdrop-blur-sm md:items-center md:px-4 md:py-8"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -57,9 +57,9 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl rounded-2xl border border-ink-700 bg-ink-900 shadow-card"
+        className="flex h-full w-full max-w-2xl flex-col overflow-hidden border border-ink-700 bg-ink-900 shadow-card md:h-auto md:max-h-[90vh] md:rounded-2xl"
       >
-        <header className="sticky top-0 z-10 flex items-start justify-between gap-3 rounded-t-2xl border-b border-ink-800 bg-ink-900/95 px-5 py-4 backdrop-blur">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-ink-800 bg-ink-900/95 px-5 py-4">
           <div className="min-w-0">
             <h2
               id="exercise-modal-title"
@@ -94,7 +94,7 @@ export default function ExerciseDetailsModal({ exerciseName, onClose }: Props) {
           </button>
         </header>
 
-        <div className="space-y-5 px-5 py-5">
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
           {/* Video placeholder */}
           <VideoBlock url={entry?.videoUrl} imageUrl={entry?.imageUrl} />
 
@@ -243,7 +243,7 @@ function VideoBlock({ url, imageUrl }: { url?: string; imageUrl?: string }) {
         href={url}
         target="_blank"
         rel="noreferrer"
-        className="group block aspect-video w-full overflow-hidden rounded-xl border border-ink-800 bg-ink-850"
+        className="group block aspect-[16/7] w-full overflow-hidden rounded-xl border border-ink-800 bg-ink-850"
       >
         <div className="relative flex h-full w-full items-center justify-center">
           {imageUrl ? (
@@ -259,14 +259,13 @@ function VideoBlock({ url, imageUrl }: { url?: string; imageUrl?: string }) {
     );
   }
 
+  // Compact placeholder when no video is set — keeps the coaching content
+  // as the headline of the modal.
   return (
-    <div className="flex aspect-video w-full items-center justify-center rounded-xl border border-dashed border-ink-700 bg-ink-850 text-zinc-500">
-      <div className="text-center">
-        <PlayCircle size={28} className="mx-auto mb-1.5 text-zinc-600" />
-        <div className="text-xs">Video demo coming soon</div>
-        <div className="mt-0.5 text-[10px] text-zinc-600">
-          Add a videoUrl to this exercise in the library to enable.
-        </div>
+    <div className="flex h-20 w-full items-center justify-center rounded-xl border border-dashed border-ink-700 bg-ink-850 text-zinc-500">
+      <div className="flex items-center gap-2 text-xs">
+        <PlayCircle size={16} className="text-zinc-600" />
+        <span>Video demo coming soon</span>
       </div>
     </div>
   );

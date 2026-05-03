@@ -27,6 +27,36 @@ export interface MacroInput {
   recentLogs?: WorkoutLog[];
 }
 
+/**
+ * Adaptive protein target in grams. Adjusts to goal + bodyweight + goal weight.
+ *
+ * Rules (per ISSA / common evidence-based fat-loss programming):
+ *   - fat_loss / recomp: max(currentLb × 1.0, goalLb × 1.2) — preserve muscle
+ *     during the cut. Higher of the two formulas wins so very heavy lifters
+ *     trying to drop a lot don't accidentally undershoot.
+ *   - strength / meet_prep: currentLb × 1.0
+ *   - default (maintenance / unclassified): currentLb × 0.8
+ *
+ * If the user has explicitly set `proteinTargetG` on their profile, that
+ * override always wins.
+ */
+export function computeProteinTargetG(p: Profile): number {
+  if (p.proteinTargetG && p.proteinTargetG > 0) return p.proteinTargetG;
+  switch (p.goal) {
+    case 'fat_loss':
+    case 'recomp':
+      return Math.max(
+        Math.round(p.weightLbs * 1.0),
+        Math.round(p.goalWeightLbs * 1.2),
+      );
+    case 'strength':
+    case 'meet_prep':
+      return Math.round(p.weightLbs * 1.0);
+    default:
+      return Math.round(p.weightLbs * 0.8);
+  }
+}
+
 // Mifflin-St Jeor for women.
 function bmrFemale(p: Profile): number {
   const kg = p.weightLbs * 0.4536;
@@ -175,7 +205,9 @@ export function computeMacroTargets(input: MacroInput): MacroTargets {
   calories = Math.round(calories / 10) * 10;
 
   // ─── Macros ────────────────────────────────────────────────────────────
-  const proteinG = Math.max(profile.proteinTargetG ?? 0, Math.round(profile.weightLbs * 0.9));
+  // Adaptive protein target — computed from goal + bodyweight + goal weight,
+  // unless the user has explicitly set a manual value on their profile.
+  const proteinG = computeProteinTargetG(profile);
   const proteinCals = proteinG * 4;
   const carbsRatio = isTrainingDay ? 0.45 : 0.32;
   let carbsG = Math.round((carbsRatio * calories) / 4) + extraCarbsG;

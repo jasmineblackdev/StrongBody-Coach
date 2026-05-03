@@ -4,6 +4,7 @@
 
 import type { Profile, WeeklyCheckIn } from '../../types';
 import type { FatLossAnalysis } from '../fatLossEngine';
+import { computeProteinTargetG } from '../macroEngine';
 import type { ReadinessReport } from '../recoveryEngine';
 import type { LiftEstimate, LiftKey, StrengthTrend } from '../strengthEngine';
 import type { WeightTrendReport } from '../weightTrendEngine';
@@ -49,7 +50,7 @@ export function generateCoachSummary(input: CoachSummaryInput): CoachSummary {
       );
     } else if (rate > 2) {
       sentences.push(
-        `Trending down ${rate.toFixed(1)} lb/wk is fast — protect muscle by holding protein high (${Math.round(profile.weightLbs * 0.9)}g+).`,
+        `Trending down ${rate.toFixed(1)} lb/wk is fast — protect muscle by holding protein high (${computeProteinTargetG(profile)}g+).`,
       );
     } else {
       sentences.push(

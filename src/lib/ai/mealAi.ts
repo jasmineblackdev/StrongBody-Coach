@@ -2,14 +2,14 @@
 // Pure rule-based: triggers driven by macro hit/miss flags.
 
 import type { DailyMealPlan, Profile } from '../../types';
+import { computeProteinTargetG } from '../macroEngine';
 
 export function generateMealNarrative(
   plan: DailyMealPlan,
   profile: Profile,
   isTrainingDay: boolean,
 ): string {
-  const proteinTarget =
-    profile.proteinTargetG ?? Math.round(profile.weightLbs * 0.9);
+  const proteinTarget = computeProteinTargetG(profile);
   const proteinShortfall = Math.max(0, proteinTarget - plan.totals.proteinG);
 
   const opener = isTrainingDay

@@ -253,7 +253,7 @@ export default function ProfilePage() {
                 type="number"
                 className="input"
                 value={p.proteinTargetG ?? ''}
-                placeholder={`${Math.round(p.weightLbs * 0.9)} (default)`}
+                placeholder={`auto: computed from goal + bodyweight`}
                 onChange={(e) => update('proteinTargetG', e.target.value ? Number(e.target.value) : undefined)}
               />
             </Field>
