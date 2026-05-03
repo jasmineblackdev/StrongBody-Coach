@@ -6,6 +6,7 @@ import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { buildDailyPlan } from '../lib/mealPlan';
+import { matchesMainLift } from '../lib/strengthEngine';
 import type { BodyMetric } from '../types';
 
 export default function ProgressPage() {
@@ -17,19 +18,25 @@ export default function ProgressPage() {
 
   const sorted = [...metrics].sort((a, b) => a.date.localeCompare(b.date));
   const liftHistory = useMemo(() => {
+    // M8 fix: same strict main-lift matching as strengthEngine, so the chart
+    // doesn't draw Front Squat / Paused Squat / Bulgarian Split Squat as
+    // "Squat" data points (which would look like a regression during a
+    // variation block).
     const series = logs
       .slice()
       .reverse()
       .map((l) => {
-        const top = (lift: RegExp) => {
-          const ex = l.exercises.find((e) => lift.test(e.prescriptionName));
+        const top = (lift: 'squat' | 'bench' | 'deadlift') => {
+          const ex = l.exercises.find((e) =>
+            matchesMainLift(e.prescriptionName, lift),
+          );
           return ex ? Math.max(0, ...ex.sets.map((s) => s.weight)) : null;
         };
         return {
           date: l.date.slice(5, 10),
-          squat: top(/squat/i),
-          bench: top(/bench/i),
-          deadlift: top(/deadlift/i),
+          squat: top('squat'),
+          bench: top('bench'),
+          deadlift: top('deadlift'),
         };
       });
     return series;

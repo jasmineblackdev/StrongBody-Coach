@@ -201,26 +201,37 @@ export function computeMacroTargets(input: MacroInput): MacroTargets {
   }
 
   // ─── Weight trend correction ───────────────────────────────────────────
+  // H1 fix: require ≥7 samples before adjusting calories on trend signal.
+  // Two or three weigh-ins is just noise — cutting 100 kcal off that is
+  // premature and stacks on top of the goal deficit.
   const trend = weeklyWeightTrend(metrics);
+  const TREND_MIN_SAMPLES = 7;
   if (profile.goal === 'fat_loss') {
-    if (trend.trend === 'stable' && trend.samples >= 2) {
+    if (trend.trend === 'stable' && trend.samples >= TREND_MIN_SAMPLES) {
       calories -= 100;
       notes.push(
         `Weight has stalled (${trend.rate} lb/wk over ${trend.samples} measurements) — dropping 100 kcal.`,
       );
-    } else if (trend.trend === 'losing' && trend.rate <= -1.5) {
+    } else if (
+      trend.trend === 'losing' &&
+      trend.rate <= -1.5 &&
+      trend.samples >= TREND_MIN_SAMPLES
+    ) {
       calories += 100;
       notes.push(
         `Losing fast (${Math.abs(trend.rate)} lb/wk) — adding 100 kcal to protect muscle.`,
       );
-    } else if (trend.trend === 'gaining' && trend.samples >= 2) {
+    } else if (
+      trend.trend === 'gaining' &&
+      trend.samples >= TREND_MIN_SAMPLES
+    ) {
       calories -= 150;
       notes.push(
         `Trending up on a fat-loss block (${trend.rate} lb/wk) — dropping 150 kcal.`,
       );
     }
   } else if (profile.goal === 'recomp') {
-    if (trend.trend === 'gaining' && trend.samples >= 2) {
+    if (trend.trend === 'gaining' && trend.samples >= TREND_MIN_SAMPLES) {
       calories -= 100;
       notes.push(`Recomp drifting up (${trend.rate} lb/wk) — dropping 100 kcal.`);
     }

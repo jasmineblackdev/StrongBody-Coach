@@ -39,12 +39,42 @@ export interface LiftEstimate {
   confidence: EstimateConfidence;
 }
 
-const PATTERNS: Record<LiftKey, RegExp> = {
-  squat: /(?:^|\b)(back\s+squat|low[- ]bar\s+squat|high[- ]bar\s+squat|squat)$/i,
-  bench: /(?:^|\b)(bench\s+press|bench)$/i,
-  deadlift:
-    /(?:^|\b)(conventional\s+deadlift|barbell\s+deadlift|trap[- ]bar\s+deadlift|sumo\s+deadlift|deadlift)$/i,
+// H3 + M8 fix: strict whitelist of canonical main-lift names. Variations
+// like Front Squat, Paused Squat, Bulgarian Split Squat, Goblet Squat,
+// Box Squat, Hack Squat, Front Foot Elevated Squat, Close-Grip Bench,
+// Paused Bench (2s), Larsen / Spoto / Feet-Up / DB / Incline / Decline /
+// Overhead presses, Romanian / Deficit / Pause / Stiff-Leg / Snatch-Grip
+// deadlifts — all of these are deliberately LIGHTER than the main lift
+// or use a different bar path. Tracking them as "squat 1RM" pollutes the
+// trend (e.g., Front Squat days look like "regressing" against a Back
+// Squat baseline).
+const MAIN_LIFT_PATTERNS: Record<LiftKey, RegExp[]> = {
+  squat: [
+    /^(barbell\s+)?back\s+squat$/i,
+    /^(barbell\s+)?(low|high)[\s-]bar\s+squat$/i,
+    /^(barbell\s+)?squat$/i,
+  ],
+  bench: [
+    /^(barbell\s+)?(flat\s+)?bench(\s+press)?$/i,
+  ],
+  deadlift: [
+    /^(barbell\s+)?conventional\s+deadlift$/i,
+    /^(barbell\s+)?deadlift$/i,
+    /^trap[\s-]bar\s+deadlift$/i,
+    /^sumo\s+deadlift$/i,
+  ],
 };
+
+/**
+ * True only when the prescription name is the canonical main lift, not a
+ * lighter / different-bar-path variation. Used by the strength engine and
+ * the Progress page big-3 chart so variation blocks don't pollute the
+ * 1RM trend line.
+ */
+export function matchesMainLift(name: string, lift: LiftKey): boolean {
+  const trimmed = name.trim();
+  return MAIN_LIFT_PATTERNS[lift].some((re) => re.test(trimmed));
+}
 
 /**
  * Adjusted Epley with reps-in-reserve.
@@ -145,12 +175,13 @@ export function estimateLift(
   opts: EstimateOptions = {},
 ): LiftEstimate {
   const sessionLimit = opts.sessionLimit ?? 5;
-  const pattern = PATTERNS[lift];
   const sortedLogs = [...logs].sort((a, b) => b.date.localeCompare(a.date));
 
   const evidence: SetEvidence[] = [];
   for (const log of sortedLogs) {
-    const matches = log.exercises.filter((e) => pattern.test(e.prescriptionName));
+    const matches = log.exercises.filter((e) =>
+      matchesMainLift(e.prescriptionName, lift),
+    );
     if (!matches.length) continue;
 
     let pickName: string | null = null;

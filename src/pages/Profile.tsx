@@ -53,8 +53,11 @@ export default function ProfilePage() {
 
   function save() {
     const previous = store.getProfile();
+    const currentPhase = store.getPlan()?.phase ?? 'hypertrophy';
     store.setProfile(p);
-    store.setPlan(buildWeeklyPlan(p, store.getWeekNumber(), 'hypertrophy'));
+    // Preserve the user's current training phase — never silently force
+    // hypertrophy on save. Bug fix C1.
+    store.setPlan(buildWeeklyPlan(p, store.getWeekNumber(), currentPhase));
 
     // If body weight changed, log a body metric for today so Dashboard / Progress
     // / charts pick it up immediately. Replaces today's metric if one exists,

@@ -65,19 +65,30 @@ export function computeWeightTrend(
   const goal = profile.goalWeightLbs;
 
   const sevenDayAvg = avgInWindow(sortedDesc, 0, 7) ?? current;
-  const priorSevenDayAvg =
-    avgInWindow(sortedDesc, 7, 14) ?? sevenDayAvg;
-  const weeklyChange = +(sevenDayAvg - priorSevenDayAvg).toFixed(2);
+  // H4 fix: track whether the prior 7–14 day window actually has data.
+  // Without it, weeklyChange isn't comparing two real windows — falling back
+  // to sevenDayAvg makes weeklyChange = 0 and tricks downstream engines into
+  // thinking the user has plateaued.
+  const priorSevenDayAvgRaw = avgInWindow(sortedDesc, 7, 14);
+  const hasPriorWindow = priorSevenDayAvgRaw !== null;
+  const priorSevenDayAvg = priorSevenDayAvgRaw ?? sevenDayAvg;
+  const weeklyChange = hasPriorWindow
+    ? +(sevenDayAvg - priorSevenDayAvg).toFixed(2)
+    : 0;
 
-  const remaining = +(current - goal).toFixed(1);
+  // H2 fix: anchor "remaining" on the 7-day average rather than the latest
+  // single weigh-in, so the number doesn't jitter ±2 lb day to day with
+  // water weight or bloat.
+  const remaining = +(sevenDayAvg - goal).toFixed(1);
 
   // totalLostFromStart: oldest metric → current (or profile.weightLbs as fallback baseline)
   const oldest = sortedDesc[sortedDesc.length - 1]?.weightLbs;
   const baseline = oldest ?? profile.weightLbs;
   const totalLostFromStart = +Math.max(0, baseline - current).toFixed(1);
 
+  // H4 fix: only classify a direction when both windows have data.
   let trend: WeightDirection = 'unknown';
-  if (sortedDesc.length >= 2) {
+  if (sortedDesc.length >= 2 && hasPriorWindow) {
     if (weeklyChange <= -0.4) trend = 'losing';
     else if (weeklyChange >= 0.4) trend = 'gaining';
     else trend = 'stable';
@@ -93,9 +104,11 @@ export function computeWeightTrend(
     goalDate = d.toISOString().slice(0, 10);
   }
 
+  // H4 fix: confidence requires both windows to be populated, not just
+  // a flat count of entries (7 entries all in this week ≠ a real trend).
   let confidence: WeightConfidence = 'low';
-  if (sortedDesc.length >= 7) confidence = 'medium';
-  if (sortedDesc.length >= 14) confidence = 'high';
+  if (sortedDesc.length >= 7 && hasPriorWindow) confidence = 'medium';
+  if (sortedDesc.length >= 14 && hasPriorWindow) confidence = 'high';
 
   const notes: string[] = [];
   if (sortedDesc.length === 0) {
