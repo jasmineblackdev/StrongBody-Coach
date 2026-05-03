@@ -18,6 +18,7 @@ import { store } from '../lib/storage';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { buildDailyPlan } from '../lib/mealPlan';
 import { dayLabel } from '../lib/workoutPlan';
+import CoachDecisionCard from '../components/CoachDecisionCard';
 import type { WorkoutDay, WorkoutSession } from '../types';
 
 function todayWorkout(weekNumber: number): WorkoutSession | null {
@@ -226,6 +227,10 @@ export default function Dashboard() {
           </div>
         )}
       </CoachMessage>
+
+      {/* Coach Brain weekly decision — pending decisions surface here as
+          Accept / Reject. Hides itself when there is no decision yet. */}
+      <CoachDecisionCard mode="stored" />
 
       {/* Adherence + plateau card — answers "why isn't this working?" */}
       {plateau && (

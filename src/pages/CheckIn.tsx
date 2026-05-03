@@ -13,7 +13,12 @@ import { useStoreVersion } from '../hooks/useStore';
 import { analyzeFatLoss, recommendationTone } from '../lib/fatLossEngine';
 import { analyzeAdherenceAndPlateau, plateauTone } from '../lib/adherenceEngine';
 import { computeWeightTrend } from '../lib/weightTrendEngine';
-import type { AdherenceLevel, WeeklyCheckIn } from '../types';
+import { computeReadiness } from '../lib/recoveryEngine';
+import { estimateAllLifts } from '../lib/strengthEngine';
+import { assessInjuryRisk } from '../lib/ml/injuryRisk';
+import { decideThisWeek } from '../lib/weeklyDecisionEngine';
+import CoachDecisionCard from '../components/CoachDecisionCard';
+import type { AdherenceLevel, CoachDecision, WeeklyCheckIn } from '../types';
 
 const ADHERENCE: AdherenceLevel[] = ['yes', 'mostly', 'no'];
 const ADHERENCE_LABEL: Record<AdherenceLevel, string> = {
@@ -36,6 +41,7 @@ export default function CheckInPage() {
   const weightTrend = useMemo(() => computeWeightTrend(metrics, profile), [metrics, profile]);
 
   const [submitted, setSubmitted] = useState<WeeklyCheckIn | null>(null);
+  const [coachDecision, setCoachDecision] = useState<CoachDecision | null>(null);
   const [draft, setDraft] = useState<Omit<WeeklyCheckIn, 'id'>>({
     date: todayIso(),
     weightAvg7d: weightTrend.sevenDayAvg,
@@ -65,6 +71,29 @@ export default function CheckInPage() {
       date: new Date().toISOString(),
     };
     store.addCheckIn(entry);
+
+    // Generate a fresh weekly coach decision using the just-submitted
+    // check-in. Persist it as pending — it stays pending until the user
+    // accepts or rejects via the CoachDecisionCard.
+    const freshTrend = computeWeightTrend(metrics, profile);
+    const decision = decideThisWeek({
+      profile,
+      weekNumber: store.getWeekNumber(),
+      weightTrend: freshTrend,
+      recovery: computeReadiness(logs),
+      lifts: estimateAllLifts(logs, {
+        baselines: {
+          squat: profile.squat1RM,
+          bench: profile.bench1RM,
+          deadlift: profile.deadlift1RM,
+        },
+      }),
+      injuryRisk: assessInjuryRisk(logs),
+      recentLogs: logs,
+      lastCheckIn: entry,
+    });
+    store.addCoachDecision(decision);
+    setCoachDecision(decision);
     setSubmitted(entry);
   }
 
@@ -101,6 +130,26 @@ export default function CheckInPage() {
             Logged {submitted.date.slice(0, 10)} · the engine ran a fresh analysis below.
           </p>
         </header>
+
+        {coachDecision && (
+          <CoachDecisionCard
+            mode="draft"
+            decision={coachDecision}
+            onResolved={(status) => {
+              // After accept/reject, the store entry is updated by the card.
+              // Refresh the local copy so the UI reflects the new status.
+              const fresh = store
+                .getCoachDecisions()
+                .find((d) => d.id === coachDecision.id);
+              if (fresh) setCoachDecision(fresh);
+              if (status === 'accepted') {
+                // Profile may have changed (calorie offset, steps target),
+                // so re-render once. The store emit already covers most of
+                // this, but explicit no-op state poke keeps things tidy.
+              }
+            }}
+          />
+        )}
 
         <Card className="border-accent/20">
           <SectionHeader

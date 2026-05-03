@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Camera, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Card, CoachMessage, Pill, SectionHeader, StatCard } from '../components/ui';
 import { BigThreeChart, BodyWeightChart, ComplianceChart, MacroStackedBar } from '../components/charts';
 import { store } from '../lib/storage';
@@ -7,6 +7,8 @@ import { useStoreVersion } from '../hooks/useStore';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { buildDailyPlan } from '../lib/mealPlan';
 import { matchesMainLift } from '../lib/strengthEngine';
+import ProgressPhotoPanel from '../components/ProgressPhotoPanel';
+import PhotoAnalysisPanel from '../components/PhotoAnalysisPanel';
 import type { BodyMetric } from '../types';
 
 export default function ProgressPage() {
@@ -239,20 +241,13 @@ export default function ProgressPage() {
           )}
         </Card>
 
-        <Card className="lg:col-span-3">
-          <SectionHeader title="Progress photos" subtitle="Placeholder — wire to Supabase Storage in v0.2" />
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="aspect-[3/4] rounded-2xl border border-dashed border-ink-700 bg-ink-850 flex flex-col items-center justify-center text-zinc-500"
-              >
-                <Camera size={20} />
-                <div className="mt-2 text-xs">Add photo</div>
-              </div>
-            ))}
-          </div>
-        </Card>
+        <div className="lg:col-span-3">
+          <ProgressPhotoPanel />
+        </div>
+
+        <div className="lg:col-span-3">
+          <PhotoAnalysisPanel />
+        </div>
       </div>
     </div>
   );

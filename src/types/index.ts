@@ -54,6 +54,25 @@ export interface Profile {
    * Workout time in 24-hour HH:MM. Drives pre/post-workout meal shaping.
    */
   workoutTime?: string;
+  /**
+   * Auto-Coach Mode. When ON, the app reviews logs weekly and drafts a single
+   * decision for approval. Default OFF — drafts are still generated on demand
+   * from the weekly check-in, this just controls whether the dashboard
+   * surfaces a "review this week's decision" prompt.
+   */
+  autoCoach?: boolean;
+  /**
+   * Signed kcal offset applied AFTER the macro engine's own goal/trend
+   * adjustments. The Coach Brain writes here when the user accepts a
+   * `reduce_calories` (negative) or `increase_recovery` (positive) decision.
+   * Reset to 0 by accepting a `stay_course` decision.
+   */
+  calorieOffsetKcal?: number;
+  /**
+   * Daily step target the user accepted from a coach decision. Display-only —
+   * the app doesn't track step counts itself.
+   */
+  dailyStepsTarget?: number;
   createdAt: string;
 }
 
@@ -224,4 +243,72 @@ export interface WeeklyCheckIn {
   energyRecovery: number; // 1–10
   whatWorked: string;
   whatNeedsAdjustment: string;
+}
+
+// ─── Coach Brain (weekly decision engine) ──────────────────────────────────
+
+export type CoachDecisionKind =
+  | 'stay_course'
+  | 'reduce_calories'
+  | 'increase_steps'
+  | 'shift_carbs'
+  | 'deload'
+  | 'reduce_training_volume'
+  | 'increase_recovery'
+  | 'adjust_exercises'
+  | 'improve_adherence'
+  | 'log_more_data';
+
+export type CoachDecisionStatus = 'pending' | 'accepted' | 'rejected';
+
+export type CoachDecisionConfidence = 'low' | 'medium' | 'high';
+
+export type SuggestedChangeKind =
+  | 'macro_adjust'
+  | 'phase_change'
+  | 'steps_target'
+  | 'volume_decrease'
+  | 'cardio_increase'
+  | 'food_review'
+  | 'exercise_swap'
+  | 'behavior';
+
+export interface SuggestedChange {
+  kind: SuggestedChangeKind;
+  description: string;
+  /**
+   * Optional payload the apply step uses to mutate state. Pure-data only —
+   * no functions, so it stays JSON-serializable for localStorage.
+   */
+  payload?: {
+    calorieOffsetKcal?: number;
+    dailyStepsTarget?: number;
+    targetPhase?: TrainingPhase;
+    volumeDeltaPct?: number;
+  };
+}
+
+export interface CoachDecision {
+  id: string;
+  weekNumber: number;
+  /** ISO timestamp the decision was generated. */
+  generatedAt: string;
+  decision: CoachDecisionKind;
+  /** Short headline like "Stay the course". */
+  headline: string;
+  /** 1–2 sentence reason the engine landed on this decision. */
+  reason: string;
+  confidence: CoachDecisionConfidence;
+  status: CoachDecisionStatus;
+  suggestedChanges: SuggestedChange[];
+  /** Safety guardrails — always shown, even when status is accepted. */
+  safetyNotes: string[];
+  observations: {
+    whatWorked: string[];
+    whatHeldBack: string[];
+  };
+  /** Free-text the user can leave when rejecting (optional). */
+  rejectionReason?: string;
+  acceptedAt?: string;
+  rejectedAt?: string;
 }

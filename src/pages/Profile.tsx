@@ -225,6 +225,22 @@ export default function ProfilePage() {
             />
             On Wegovy (adjust hunger / GI guidance)
           </label>
+
+          <label className="mt-3 flex items-start gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={p.autoCoach ?? false}
+              onChange={(e) => update('autoCoach', e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-pink-500"
+            />
+            <span>
+              <span className="font-semibold text-zinc-100">Auto-Coach Mode</span>
+              <span className="block text-xs text-zinc-400">
+                When enabled, StrongBody Coach reviews your logs weekly and drafts
+                changes for approval. Nothing applies until you accept.
+              </span>
+            </span>
+          </label>
         </Card>
 
         <Card>

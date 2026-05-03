@@ -1,5 +1,6 @@
 import type {
   BodyMetric,
+  CoachDecision,
   PlanProposal,
   Profile,
   WeeklyCheckIn,
@@ -15,6 +16,7 @@ const KEYS = {
   weekNumber: 'sbc:weekNumber',
   proposal: 'sbc:planProposal',
   checkIns: 'sbc:checkIns',
+  coachDecisions: 'sbc:coachDecisions',
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -127,6 +129,29 @@ export const store = {
   },
   setCheckIns: (cs: WeeklyCheckIn[]) => {
     write(KEYS.checkIns, cs);
+    emit();
+  },
+
+  // Coach Brain decisions, newest first. Single pending decision at a time;
+  // accepted/rejected entries stay as a history log.
+  getCoachDecisions: (): CoachDecision[] =>
+    read<CoachDecision[]>(KEYS.coachDecisions, []),
+  addCoachDecision: (d: CoachDecision) => {
+    const all = store.getCoachDecisions();
+    all.unshift(d);
+    write(KEYS.coachDecisions, all);
+    emit();
+  },
+  updateCoachDecision: (id: string, patch: Partial<CoachDecision>) => {
+    const all = store.getCoachDecisions();
+    const idx = all.findIndex((d) => d.id === id);
+    if (idx < 0) return;
+    all[idx] = { ...all[idx], ...patch };
+    write(KEYS.coachDecisions, all);
+    emit();
+  },
+  setCoachDecisions: (ds: CoachDecision[]) => {
+    write(KEYS.coachDecisions, ds);
     emit();
   },
 

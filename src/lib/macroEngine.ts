@@ -258,6 +258,18 @@ export function computeMacroTargets(input: MacroInput): MacroTargets {
     notes.push(`Hunger ${hungerLevel}/10 today — +150 kcal post-workout carbs.`);
   }
 
+  // ─── Coach Brain offset ────────────────────────────────────────────────
+  // Applied AFTER the rule-based goal/trend block so accepted weekly
+  // decisions stack on top of the engine's own logic. Reset to 0 by
+  // accepting a `stay_course` decision in the Coach Decision card.
+  if (profile.calorieOffsetKcal && profile.calorieOffsetKcal !== 0) {
+    calories += profile.calorieOffsetKcal;
+    const sign = profile.calorieOffsetKcal > 0 ? '+' : '';
+    notes.push(
+      `Coach decision: ${sign}${profile.calorieOffsetKcal} kcal applied from your accepted weekly review.`,
+    );
+  }
+
   // ─── Cross-session hunger pattern ──────────────────────────────────────
   const avgHunger = recentAvgHunger(recentLogs);
   if (avgHunger >= 7) {
@@ -371,13 +383,21 @@ export function computeMacroBreakdown(profile: Profile): MacroBreakdown {
       ? 50
       : 0;
 
+  const coachOffset = profile.calorieOffsetKcal ?? 0;
+
   const hardFloor = Math.max(
     1500,
     Math.round(profile.weightLbs * 8),
     Math.round(bmr * 0.85),
   );
-  const trainingDayTarget = Math.max(hardFloor, trainingDayTdee + goalDeficit);
-  const restDayTarget = Math.max(hardFloor, restDayTdee + goalDeficit);
+  const trainingDayTarget = Math.max(
+    hardFloor,
+    trainingDayTdee + goalDeficit + coachOffset,
+  );
+  const restDayTarget = Math.max(
+    hardFloor,
+    restDayTdee + goalDeficit + coachOffset,
+  );
 
   const proteinG = computeProteinTargetG(profile);
   let proteinFormula: string;
