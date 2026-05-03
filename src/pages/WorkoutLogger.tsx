@@ -1,9 +1,19 @@
 import { useMemo, useState } from 'react';
-import { Save, Plus, Trash2, ClipboardCheck, Timer } from 'lucide-react';
+import {
+  Save,
+  Plus,
+  Trash2,
+  ClipboardCheck,
+  Timer,
+  Eye,
+  Replace,
+  AlertTriangle,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
 import RestTimer from '../components/RestTimer';
 import FormRiskPanel from '../components/FormRiskPanel';
+import ExerciseDetailsModal from '../components/ExerciseDetailsModal';
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import { dayLabel } from '../lib/workoutPlan';
@@ -18,6 +28,29 @@ import type {
   WorkoutLog,
   WorkoutSession,
 } from '../types';
+
+// Quick pain/issue flag chips. Tapping a chip:
+//   1. appends the flag text to the exercise's painNotes
+//   2. surfaces a warning under the exercise card
+// Form Risk Engine reads painNotes already, so this drives the
+// per-exercise risk read on the next page render.
+const PAIN_FLAGS = [
+  { key: 'too_heavy', label: 'Too heavy', tone: 'warning' as const },
+  { key: 'lower_back', label: 'Lower back', tone: 'danger' as const },
+  { key: 'knee', label: 'Knee', tone: 'danger' as const },
+  { key: 'shoulder', label: 'Shoulder', tone: 'danger' as const },
+  { key: 'wrist_elbow', label: 'Wrist/elbow', tone: 'warning' as const },
+  { key: 'grip', label: 'Grip', tone: 'warning' as const },
+];
+
+const PAIN_FLAG_TEXT: Record<string, string> = {
+  too_heavy: 'too heavy',
+  lower_back: 'low back',
+  knee: 'knee',
+  shoulder: 'shoulder',
+  wrist_elbow: 'wrist/elbow',
+  grip: 'grip',
+};
 
 const SORENESS: { key: ProblemArea; label: string }[] = [
   { key: 'lower_back', label: 'Lower back' },
@@ -63,6 +96,14 @@ export default function WorkoutLoggerPage() {
   const [restExerciseIdx, setRestExerciseIdx] = useState<number | null>(null);
   const [restRecommendedSec, setRestRecommendedSec] = useState<number>(90);
 
+  // Form modal — opens with the exercise the user tapped.
+  const [formExercise, setFormExercise] = useState<string | null>(null);
+
+  // Per-exercise quick-flag state. Toggling a chip appends its label to
+  // painNotes and shows a warning. UI shows which flags have been tapped
+  // for the current session.
+  const [activeFlags, setActiveFlags] = useState<Record<number, Set<string>>>({});
+
   function changeSession(id: string) {
     setSessionId(id);
     const s = plan.sessions.find((x) => x.id === id) ?? plan.sessions[0];
@@ -95,6 +136,44 @@ export default function WorkoutLoggerPage() {
 
   function toggleSoreness(area: ProblemArea) {
     setSoreness((prev) => (prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area]));
+  }
+
+  /**
+   * Toggle a quick pain/issue flag for an exercise. When a flag is added,
+   * append its text to the exercise's painNotes (so the Form Risk engine
+   * picks it up). When removed, strip the text out.
+   */
+  function toggleFlag(exIdx: number, flagKey: string) {
+    const current = activeFlags[exIdx] ?? new Set<string>();
+    const next = new Set(current);
+    const text = PAIN_FLAG_TEXT[flagKey];
+    if (next.has(flagKey)) {
+      next.delete(flagKey);
+    } else {
+      next.add(flagKey);
+    }
+    setActiveFlags({ ...activeFlags, [exIdx]: next });
+
+    setExerciseLogs((prev) => {
+      const out = structuredClone(prev);
+      const existingNotes = out[exIdx].painNotes ?? '';
+      // Rebuild notes from the active flag set so we don't accumulate
+      // duplicates across toggles. Preserve any free-text the user typed
+      // by keeping non-flag content.
+      const flagTexts = Array.from(next)
+        .map((k) => PAIN_FLAG_TEXT[k])
+        .filter(Boolean);
+      const allFlagTexts = Object.values(PAIN_FLAG_TEXT);
+      const nonFlagText = existingNotes
+        .split(/[,;]/)
+        .map((s) => s.trim())
+        .filter((s) => s && !allFlagTexts.includes(s))
+        .join(', ');
+      const flagText = flagTexts.join(', ');
+      out[exIdx].painNotes = [nonFlagText, flagText].filter(Boolean).join(', ');
+      void text;
+      return out;
+    });
   }
 
   /**
@@ -186,18 +265,79 @@ export default function WorkoutLoggerPage() {
             const exLog = exerciseLogs[exIdx];
             return (
               <div key={pres.name} className="rounded-2xl border border-ink-800 bg-ink-850 p-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div>
-                    <div className="font-semibold text-zinc-100">{pres.name}</div>
-                    <div className="text-xs text-zinc-400">
-                      target {pres.sets} × {pres.reps}
-                      {pres.loadLbs ? ` @ ${pres.loadLbs} lb` : ''}
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    {/* Bigger exercise name — readable arm's-length in dim
+                        gym lighting. */}
+                    <div className="font-display text-xl font-bold text-zinc-100">
+                      {pres.name}
+                    </div>
+                    <div className="mt-0.5 text-sm text-zinc-300">
+                      target <span className="font-semibold text-zinc-100">{pres.sets} × {pres.reps}</span>
+                      {pres.loadLbs ? <> · <span className="font-semibold text-zinc-100">{pres.loadLbs} lb</span></> : null}
                       {pres.rpeTarget ? ` · RPE ${pres.rpeTarget}` : ''}
                     </div>
                   </div>
-                  <button onClick={() => addSet(exIdx)} className="btn-outline">
-                    <Plus size={14} /> set
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => setFormExercise(pres.name)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-semibold text-rose-glow active:scale-95"
+                      aria-label={`View form cues for ${pres.name}`}
+                    >
+                      <Eye size={14} /> Form
+                    </button>
+                    <Link
+                      to="/plan"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-ink-700 bg-ink-850 px-3 py-2 text-xs font-semibold text-zinc-200 active:scale-95"
+                      aria-label="Swap to a safer variation"
+                    >
+                      <Replace size={14} /> Swap
+                    </Link>
+                    <button
+                      onClick={() => addSet(exIdx)}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-ink-700 bg-ink-850 px-3 py-2 text-xs font-semibold text-zinc-200 active:scale-95"
+                    >
+                      <Plus size={14} /> set
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick pain/issue flags. Tapping appends to painNotes
+                    (Form Risk engine reads it) and surfaces a warning. */}
+                <div className="mt-3">
+                  <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1.5">
+                    Quick flag
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PAIN_FLAGS.map((f) => {
+                      const active = activeFlags[exIdx]?.has(f.key) ?? false;
+                      const toneOn =
+                        f.tone === 'danger'
+                          ? 'border-danger/40 bg-danger/15 text-danger'
+                          : 'border-warning/40 bg-warning/15 text-warning';
+                      return (
+                        <button
+                          key={f.key}
+                          onClick={() => toggleFlag(exIdx, f.key)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold active:scale-95 ${
+                            active
+                              ? toneOn
+                              : 'border-ink-700 bg-ink-900/40 text-zinc-300 hover:bg-ink-800'
+                          }`}
+                        >
+                          {f.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {(activeFlags[exIdx]?.size ?? 0) > 0 && (
+                    <div className="mt-2 rounded-xl border border-danger/30 bg-danger/10 p-2.5 text-xs text-zinc-100">
+                      <AlertTriangle size={12} className="inline mr-1 text-danger" />
+                      <span className="font-semibold">Do not increase load.</span>{' '}
+                      Use a safer variation. The next session's coach decision
+                      will see this flag and gate strength forecasts.
+                    </div>
+                  )}
                 </div>
 
                 {/* Header row — desktop only; mobile uses inline labels per input */}
@@ -283,10 +423,10 @@ export default function WorkoutLoggerPage() {
                         <button
                           onClick={() => logSetDone(exIdx, setIdx)}
                           disabled={!s.weight && !s.reps}
-                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-accent/40 bg-accent/10 px-2 py-2 text-xs font-semibold text-rose-glow hover:bg-accent/20 active:scale-95 disabled:opacity-40 sm:flex-none sm:px-2 sm:py-1.5"
+                          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-3 text-sm font-bold text-white shadow-glow active:scale-95 disabled:opacity-40 disabled:shadow-none sm:flex-none sm:px-3 sm:py-2"
                           aria-label="Set done — start rest timer"
                         >
-                          <Timer size={12} />
+                          <Timer size={14} />
                           Done
                         </button>
                         <button
@@ -448,6 +588,15 @@ export default function WorkoutLoggerPage() {
           exerciseName={session.prescriptions[restExerciseIdx]?.name ?? 'Rest'}
           label={`Resting — ${session.prescriptions[restExerciseIdx]?.name ?? ''}`}
           onDismiss={() => setRestArmedAt(null)}
+        />
+      )}
+
+      {formExercise && (
+        <ExerciseDetailsModal
+          exerciseName={formExercise}
+          prescription={session.prescriptions.find((p) => p.name === formExercise)}
+          phase={session.phase}
+          onClose={() => setFormExercise(null)}
         />
       )}
     </div>

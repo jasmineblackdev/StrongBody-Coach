@@ -166,7 +166,9 @@ export default function RestTimer({
   const pct = target > 0 ? (1 - remaining / target) * 100 : 100;
 
   return (
-    <div className="sticky bottom-2 z-30 mx-auto w-full max-w-md rounded-2xl border-2 border-accent/40 bg-ink-900/95 p-4 shadow-glow backdrop-blur">
+    <div
+      className="sticky z-40 mx-auto w-full max-w-md rounded-2xl border-2 border-accent/40 bg-ink-900/95 p-4 shadow-glow backdrop-blur bottom-20 md:bottom-2"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-rose-glow">

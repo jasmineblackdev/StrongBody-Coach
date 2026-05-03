@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   ClipboardCheck,
+  Home,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -21,6 +22,18 @@ const NAV = [
   { to: '/check-in', label: 'Weekly Check-In', icon: ClipboardCheck },
   { to: '/meals', label: 'Meals', icon: Salad },
   { to: '/progress', label: 'Progress', icon: LineChart },
+];
+
+// Bottom-tab nav for mobile gym use — five tabs, big finger targets,
+// labels short enough to read at arm's length. Workout = /log because
+// that's the page you're in mid-session; /plan stays accessible from
+// the Workout tab via in-page links.
+const BOTTOM_NAV = [
+  { to: '/', label: 'Today', icon: Home, end: true },
+  { to: '/log', label: 'Workout', icon: Dumbbell },
+  { to: '/meals', label: 'Meals', icon: Salad },
+  { to: '/progress', label: 'Progress', icon: LineChart },
+  { to: '/profile', label: 'Profile', icon: User2 },
 ];
 
 function NavItems({ onClick }: { onClick?: () => void }) {
@@ -48,6 +61,43 @@ function NavItems({ onClick }: { onClick?: () => void }) {
   );
 }
 
+function BottomNav() {
+  return (
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-30 border-t border-ink-800 bg-ink-950/95 backdrop-blur md:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="grid grid-cols-5">
+        {BOTTOM_NAV.map((n) => (
+          <NavLink
+            key={n.to}
+            to={n.to}
+            end={n.end}
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center gap-1 py-2.5 text-[11px] font-semibold transition active:scale-95 ${
+                isActive ? 'text-rose-glow' : 'text-zinc-400 hover:text-zinc-100'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <span
+                  className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition ${
+                    isActive ? 'bg-accent/15 text-rose-glow' : 'text-zinc-400'
+                  }`}
+                >
+                  <n.icon size={18} />
+                </span>
+                <span>{n.label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 function Brand() {
   return (
     <div className="flex items-center gap-2.5">
@@ -66,11 +116,11 @@ export default function Layout() {
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-full">
-      {/* Top bar (mobile) */}
+      {/* Top bar (mobile) — kept slim; bottom-tab nav owns primary navigation. */}
       <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-ink-800/80 bg-ink-950/80 px-4 py-3 backdrop-blur">
         <Brand />
         <button
-          aria-label="Open menu"
+          aria-label="More — Workout Plan, Check-in, etc."
           onClick={() => setOpen(true)}
           className="rounded-lg border border-ink-700 p-2 text-zinc-200 hover:bg-ink-800"
         >
@@ -91,7 +141,9 @@ export default function Layout() {
           </div>
         </aside>
 
-        {/* Mobile drawer */}
+        {/* Mobile drawer — secondary destinations (Workout Plan, Check-in)
+            still reachable from the hamburger when bottom-tab nav is the
+            primary path. */}
         {open && (
           <div className="fixed inset-0 z-40 md:hidden">
             <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
@@ -107,13 +159,16 @@ export default function Layout() {
           </div>
         )}
 
-        {/* Main */}
-        <main className="min-w-0 flex-1 px-3 py-5 sm:px-4 sm:py-6 md:px-8 md:py-8">
+        {/* Main — extra bottom padding on mobile so the bottom-tab nav
+            doesn't sit on top of page content. */}
+        <main className="min-w-0 flex-1 px-3 py-5 pb-24 sm:px-4 sm:py-6 sm:pb-24 md:px-8 md:py-8 md:pb-8">
           <div className="mx-auto max-w-6xl">
             <Outlet />
           </div>
         </main>
       </div>
+
+      <BottomNav />
     </div>
   );
 }

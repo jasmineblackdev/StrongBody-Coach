@@ -86,6 +86,13 @@ export interface Profile {
    */
   autoCoach?: boolean;
   /**
+   * Gym Mode. When ON, the dashboard hides heavy AI cards (Fat Loss Insight,
+   * Photo Signal, Final Coach Review, Decision History, Predictions) and
+   * promotes Today's Workout + macros to the top. The bottom mobile nav
+   * always shows; this just streamlines what's visible mid-session.
+   */
+  gymMode?: boolean;
+  /**
    * Signed kcal offset applied AFTER the macro engine's own goal/trend
    * adjustments. The Coach Brain writes here when the user accepts a
    * `reduce_calories` (negative) or `increase_recovery` (positive) decision.

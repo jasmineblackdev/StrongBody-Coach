@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Dumbbell, Trophy, HeartPulse, Salad, Target, TrendingUp, TrendingDown, Minus, HelpCircle, Sparkles, BellRing } from 'lucide-react';
+import { Flame, Dumbbell, Trophy, HeartPulse, Salad, Target, TrendingUp, TrendingDown, Minus, HelpCircle, Sparkles, BellRing, Play, Power } from 'lucide-react';
 import { Card, CoachMessage, ProgressBar, SectionHeader, StatCard, Pill } from '../components/ui';
 import { BodyWeightChart, MacroDoughnut } from '../components/charts';
 import { useStoreVersion } from '../hooks/useStore';
@@ -155,8 +155,53 @@ export default function Dashboard() {
     profile.autoCoach === true &&
     (daysSinceLastCheckIn === null || daysSinceLastCheckIn >= 7);
 
+  const gymMode = profile.gymMode === true;
+  const toggleGymMode = () => {
+    const current = store.getProfile();
+    if (!current) return;
+    store.setProfile({ ...current, gymMode: !gymMode });
+  };
+
   return (
     <div className="space-y-6">
+      {/* Today CTA — primary action above everything else. Big, high-
+          contrast, finger-targeted. Always visible regardless of Gym Mode. */}
+      <div className="flex flex-wrap items-stretch gap-3">
+        <Link
+          to="/log"
+          className="flex flex-1 items-center justify-between gap-3 rounded-2xl border-2 border-accent/40 bg-accent/15 px-5 py-4 text-left shadow-glow transition active:scale-[0.99] hover:bg-accent/25"
+        >
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-rose-glow">
+              {todays ? 'Today' : 'Rest day'}
+            </div>
+            <div className="mt-0.5 truncate font-display text-xl font-bold text-zinc-100">
+              {todays ? `Start ${dayLabel[todays.day]}` : 'Walk + protein + recovery'}
+            </div>
+            <div className="mt-0.5 text-xs text-zinc-300">
+              {todays
+                ? `${todays.prescriptions.length} exercises · ${plan.phase} block`
+                : 'Log a measurement, hydrate, and prep tomorrow.'}
+            </div>
+          </div>
+          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-glow">
+            <Play size={22} />
+          </span>
+        </Link>
+        <button
+          onClick={toggleGymMode}
+          aria-pressed={gymMode}
+          className={`shrink-0 rounded-2xl border-2 px-4 py-3 text-sm font-semibold transition active:scale-95 ${
+            gymMode
+              ? 'border-success/40 bg-success/15 text-success'
+              : 'border-ink-700 bg-ink-850 text-zinc-200 hover:bg-ink-800'
+          }`}
+        >
+          <Power size={14} className="mr-1.5 inline-block" />
+          Gym Mode {gymMode ? 'ON' : 'OFF'}
+        </button>
+      </div>
+
       {coachNudgeDue && (
         <div className="rounded-2xl border-2 border-accent/40 bg-accent/10 p-4 shadow-glow">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -259,41 +304,50 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* AI coach summary — weekly read in 3–5 sentences */}
-      <CoachMessage tone={coachSummary.tone} title="Coach's read this week">
-        <div className="space-y-1.5">
-          {coachSummary.sentences.map((s, i) => (
-            <p key={i}>{s}</p>
-          ))}
-        </div>
-        {fatLoss.daysSinceLastCheckIn != null && (
-          <div className="mt-2 text-xs opacity-80">
-            Last check-in {fatLoss.daysSinceLastCheckIn} day
-            {fatLoss.daysSinceLastCheckIn === 1 ? '' : 's'} ago
-            {fatLoss.shouldRunNow ? ' — due for a fresh one.' : '.'}
-          </div>
-        )}
-      </CoachMessage>
+      {/* Heavy AI / coaching cards — hidden entirely in Gym Mode so the
+          mid-session view only shows what matters at the bar. */}
+      {!gymMode && (
+        <>
+          {/* AI coach summary — weekly read in 3–5 sentences */}
+          <CoachMessage tone={coachSummary.tone} title="Coach's read this week">
+            <div className="space-y-1.5">
+              {coachSummary.sentences.map((s, i) => (
+                <p key={i}>{s}</p>
+              ))}
+            </div>
+            {fatLoss.daysSinceLastCheckIn != null && (
+              <div className="mt-2 text-xs opacity-80">
+                Last check-in {fatLoss.daysSinceLastCheckIn} day
+                {fatLoss.daysSinceLastCheckIn === 1 ? '' : 's'} ago
+                {fatLoss.shouldRunNow ? ' — due for a fresh one.' : '.'}
+              </div>
+            )}
+          </CoachMessage>
 
-      {/* Female-aware fat-loss interpretation — sits ABOVE the Coach
-          Decision so the user sees the trend read before the action. */}
-      <FatLossInsightCard />
+          {/* Female-aware fat-loss interpretation — sits ABOVE the Coach
+              Decision so the user sees the trend read before the action. */}
+          <FatLossInsightCard />
 
-      {/* Photo signal — only shows when the user has at least one photo
-          set logged. Single-line read with a link to the Progress page. */}
-      <PhotoSignalCard />
+          {/* Photo signal — only shows when the user has at least one photo
+              set logged. Single-line read with a link to the Progress page. */}
+          <PhotoSignalCard />
+        </>
+      )}
 
-      {/* Final Coach Review — unified weekly card with What happened /
-          What's likely / What's holding back / Recommended action.
-          Hides itself when there is no pending decision. */}
-      <FinalCoachReview />
+      {!gymMode && (
+        <>
+          {/* Final Coach Review — unified weekly card. Hides itself
+              when there is no pending decision. */}
+          <FinalCoachReview />
 
-      {/* Decision history with outcomes (predicted vs actual after 7d).
-          Hides when zero decisions have been logged. */}
-      <DecisionHistoryPanel />
+          {/* Decision history with outcomes (predicted vs actual after 7d).
+              Hides when zero decisions have been logged. */}
+          <DecisionHistoryPanel />
+        </>
+      )}
 
       {/* Adherence + plateau card — answers "why isn't this working?" */}
-      {plateau && (
+      {!gymMode && plateau && (
         <Card className="border-accent/20">
           <SectionHeader
             title={
@@ -345,7 +399,8 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Predictions card — ML-lite forecasts */}
+      {/* Predictions card — ML-lite forecasts. Hidden in Gym Mode. */}
+      {!gymMode && (
       <Card>
         <SectionHeader
           title="Predictions"
@@ -451,16 +506,20 @@ export default function Dashboard() {
           </div>
         )}
       </Card>
+      )}
 
-      {/* Specific fat-loss action card kept as a focused secondary read */}
-      <CoachMessage
-        tone={recommendationTone(fatLoss.primary.kind)}
-        title={`This week: ${fatLoss.primary.headline}`}
-      >
-        {fatLoss.primary.body}
-      </CoachMessage>
+      {/* Specific fat-loss action card kept as a focused secondary read.
+          Hidden in Gym Mode. */}
+      {!gymMode && (
+        <CoachMessage
+          tone={recommendationTone(fatLoss.primary.kind)}
+          title={`This week: ${fatLoss.primary.headline}`}
+        >
+          {fatLoss.primary.body}
+        </CoachMessage>
+      )}
 
-      {(() => {
+      {!gymMode && (() => {
         const pending = store.getProposal();
         if (!pending) return null;
         return (

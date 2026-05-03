@@ -312,6 +312,23 @@ export default function ProfilePage() {
               </span>
             </span>
           </label>
+
+          <label className="mt-3 flex items-start gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              checked={p.gymMode ?? false}
+              onChange={(e) => update('gymMode', e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-pink-500"
+            />
+            <span>
+              <span className="font-semibold text-zinc-100">Gym Mode</span>
+              <span className="block text-xs text-zinc-400">
+                Streamlined dashboard for mid-session use. Hides AI cards
+                (Fat Loss Insight, Photo Signal, Coach Review, Predictions)
+                and promotes Today's Workout. Toggle from the Dashboard too.
+              </span>
+            </span>
+          </label>
         </Card>
 
         <Card>
