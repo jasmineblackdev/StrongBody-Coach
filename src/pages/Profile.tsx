@@ -5,6 +5,7 @@ import { useStoreVersion } from '../hooks/useStore';
 import CloudPanel from '../components/CloudPanel';
 import TestDataPanel from '../components/TestDataPanel';
 import OneRMSuggestionPanel from '../components/OneRMSuggestionPanel';
+import ExportImportPanel from '../components/ExportImportPanel';
 import { store } from '../lib/storage';
 import { buildWeeklyPlan } from '../lib/workoutPlan';
 import type { CardioPref, Goal, Profile, ProblemArea } from '../types';
@@ -89,6 +90,8 @@ export default function ProfilePage() {
       </CoachMessage>
 
       <CloudPanel />
+
+      <ExportImportPanel />
 
       <TestDataPanel />
 
