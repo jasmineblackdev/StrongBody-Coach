@@ -19,6 +19,7 @@ import { assessInjuryRisk } from '../lib/ml/injuryRisk';
 import { decideThisWeek } from '../lib/weeklyDecisionEngine';
 import { analyzeFemaleFatLoss } from '../lib/femaleFatLossEngine';
 import { computeConfidence } from '../lib/confidenceScoreEngine';
+import { computeAdaptiveIdentity } from '../lib/adaptiveIdentityEngine';
 import { getPhotoSets } from '../lib/photoStorage';
 import CoachDecisionCard from '../components/CoachDecisionCard';
 import type {
@@ -103,6 +104,14 @@ export default function CheckInPage() {
       femaleReport,
       injuryRisk: injury,
     });
+    const identity = computeAdaptiveIdentity({
+      profile,
+      metrics,
+      recentLogs: logs,
+      checkIns: [entry, ...checkIns],
+      decisions: store.getCoachDecisions(),
+      mealFeedback: store.getMealFeedback(),
+    });
     const decision = decideThisWeek({
       profile,
       weekNumber: store.getWeekNumber(),
@@ -120,6 +129,7 @@ export default function CheckInPage() {
       lastCheckIn: entry,
       femaleReport,
       confidence,
+      identity,
     });
     store.addCoachDecision(decision);
     setCoachDecision(decision);

@@ -7,6 +7,7 @@ import TestDataPanel from '../components/TestDataPanel';
 import OneRMSuggestionPanel from '../components/OneRMSuggestionPanel';
 import ExportImportPanel from '../components/ExportImportPanel';
 import MacroBreakdownPanel from '../components/MacroBreakdownPanel';
+import IdentityCard from '../components/IdentityCard';
 import { store } from '../lib/storage';
 import { buildWeeklyPlan } from '../lib/workoutPlan';
 import { computeProteinTargetG } from '../lib/macroEngine';
@@ -141,6 +142,9 @@ export default function ProfilePage() {
       {/* TestDataPanel: dev-only — gated by import.meta.env.DEV so it's
           stripped from production builds entirely. */}
       {import.meta.env.DEV && <TestDataPanel />}
+
+      {/* Adaptive coaching profile — patterns the engine has learned. */}
+      <IdentityCard profile={p} />
 
       {/* Live macro calculation worksheet — derives BMR / TDEE / targets
           from the in-progress profile draft as the user edits. */}

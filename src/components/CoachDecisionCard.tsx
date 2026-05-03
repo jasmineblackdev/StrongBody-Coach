@@ -14,6 +14,7 @@ import { estimateAllLifts } from '../lib/strengthEngine';
 import { assessInjuryRisk } from '../lib/ml/injuryRisk';
 import { analyzeFemaleFatLoss } from '../lib/femaleFatLossEngine';
 import { computeConfidence } from '../lib/confidenceScoreEngine';
+import { computeAdaptiveIdentity } from '../lib/adaptiveIdentityEngine';
 import {
   getPhotoSets,
   getPhotoVersion,
@@ -85,6 +86,14 @@ export function buildLatestDecision(): CoachDecision | null {
     femaleReport,
     injuryRisk,
   });
+  const identity = computeAdaptiveIdentity({
+    profile,
+    metrics,
+    recentLogs: logs,
+    checkIns: store.getCheckIns(),
+    decisions: store.getCoachDecisions(),
+    mealFeedback: store.getMealFeedback(),
+  });
   return decideThisWeek({
     profile,
     weekNumber: store.getWeekNumber(),
@@ -96,6 +105,7 @@ export function buildLatestDecision(): CoachDecision | null {
     lastCheckIn,
     femaleReport,
     confidence,
+    identity,
   });
 }
 

@@ -35,6 +35,7 @@ import type { LiftEstimate, LiftKey } from './strengthEngine';
 import type { InjuryRiskReport } from './ml/injuryRisk';
 import type { FemaleFatLossReport } from './femaleFatLossEngine';
 import type { ConfidenceReport } from './confidenceScoreEngine';
+import type { AdaptiveIdentity } from './adaptiveIdentityEngine';
 import { computeAdherence } from './adherenceEngine';
 import { store } from './storage';
 import { buildWeeklyPlan } from './workoutPlan';
@@ -72,6 +73,13 @@ export interface WeeklyDecisionInput {
    * gate only kicks in for the food-side recommendations.
    */
   confidence?: ConfidenceReport;
+  /**
+   * Optional adaptive identity. The Coach Brain uses it to BIAS — never
+   * to override — its rule-based decision tree. Pain / injury / female
+   * layer / confidence gates all win over identity. Identity only gets
+   * a vote when those have already cleared.
+   */
+  identity?: AdaptiveIdentity;
 }
 
 interface DecisionContext extends WeeklyDecisionInput {
@@ -124,6 +132,20 @@ export function decideThisWeek(input: WeeklyDecisionInput): CoachDecision {
     return reduceTrainingVolume(ctx);
   }
 
+  // Identity bias: high recovery sensitivity drops volume earlier. The
+  // user's body has shown it doesn't tolerate compounding fatigue, so
+  // a 60-65 recovery score with even one regressing lift triggers the
+  // volume cut instead of waiting for the standard < 60 threshold.
+  if (
+    ctx.identity?.maturityScore &&
+    ctx.identity.maturityScore >= 40 &&
+    ctx.identity.recoverySensitivity === 'high' &&
+    ctx.recovery.score < 70 &&
+    ctx.regressingLifts.length >= 1
+  ) {
+    return reduceTrainingVolume(ctx);
+  }
+
   // Female fat-loss override — only fires AFTER pain/injury checks. When
   // the female layer says water retention / false plateau / hormonal
   // hunger / mid-cycle caution, we emit its forced decision and stop.
@@ -162,6 +184,47 @@ export function decideThisWeek(input: WeeklyDecisionInput): CoachDecision {
 
     if (ctx.hunger >= 7 && !isBlocked(ctx, 'increase_steps')) {
       return increaseSteps(ctx);
+    }
+
+    // ─── Identity bias (light touch, never overrides safety) ─────────────
+    //
+    // Only kicks in AFTER bloating, low-adherence, hunger gates have
+    // cleared. These three biases nudge the brain to prefer one valid
+    // recommendation over another — they never bypass safety blocks.
+    const id = ctx.identity;
+    if (id && id.maturityScore >= 40) {
+      // High food sensitivity → prefer food review/swap over a flat cut
+      if (
+        id.foodSensitivity === 'high' &&
+        !isBlocked(ctx, 'shift_carbs') &&
+        ctx.bloating >= 5
+      ) {
+        return reviewFoodTriggers(ctx);
+      }
+      // Inconsistent adherence + stable trend → improve adherence
+      // unless adherence is essentially perfect this week. Catches
+      // "one slipped meal" weeks for users who historically swing.
+      if (
+        id.adherenceType === 'inconsistent' &&
+        ctx.adherenceScore < 0.95
+      ) {
+        return improveAdherence(ctx);
+      }
+      // Slow responder → prefer steps before cutting calories
+      if (
+        id.fatLossType === 'slow_responder' &&
+        !isBlocked(ctx, 'increase_steps') &&
+        id.preferredAdjustment !== 'calories'
+      ) {
+        return increaseSteps(ctx);
+      }
+      // Steps work better historically → choose steps over calories
+      if (
+        id.preferredAdjustment === 'steps' &&
+        !isBlocked(ctx, 'increase_steps')
+      ) {
+        return increaseSteps(ctx);
+      }
     }
 
     // Reduce calories is the LAST resort here — blockable by the female
