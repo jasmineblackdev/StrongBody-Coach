@@ -13,6 +13,7 @@ import { assessInjuryRisk, RISK_TONE } from '../lib/ml/injuryRisk';
 import { computeReadiness } from '../lib/recoveryEngine';
 import { defaultVolumeFor } from '../lib/workoutPlan';
 import GymModeToggle from '../components/GymModeToggle';
+import HomeSessionsPanel from '../components/HomeSessionsPanel';
 import type { PlanProposal, TrainingPhase, WorkoutSession } from '../types';
 
 const VOLUME_LABEL = {
@@ -264,6 +265,8 @@ export default function WorkoutPlanPage() {
           ? 'Strength block. Loads heavy, reps low, accessories targeted at your weak points.'
           : 'Hypertrophy block. Building shape and the work capacity that lets us peak hard later. Quality reps.'}
       </CoachMessage>
+
+      <HomeSessionsPanel />
 
       <div className="space-y-3">
         {plan.sessions.map((s) => (

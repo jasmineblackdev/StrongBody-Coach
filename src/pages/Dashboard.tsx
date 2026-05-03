@@ -27,6 +27,7 @@ import DecisionHistoryPanel from '../components/DecisionHistoryPanel';
 import FatLossInsightCard from '../components/FatLossInsightCard';
 import FatLossTimelineCard from '../components/FatLossTimelineCard';
 import PhotoSignalCard from '../components/PhotoSignalCard';
+import HomeSessionCard from '../components/HomeSessionCard';
 import type { WorkoutDay, WorkoutSession } from '../types';
 
 function todayWorkout(weekNumber: number): WorkoutSession | null {
@@ -203,9 +204,16 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {/* Home Core + Cardio — today's session when it's a rest day.
+          Self-hides on lift days. Shows the day's 3-of-3 rotation
+          variant, cycle week, and any safety swap (abs sore /
+          lower-back). */}
+      {!todays && <HomeSessionCard />}
+
       {/* Rest-day plan card — only when no workout today. Concrete steps /
           cardio / recovery / meal-timing reminder so the rest day still
-          has structure. */}
+          has structure. Sits below the home session for everyone who
+          wants the lifestyle reminders. */}
       {!todays && (() => {
         const volumePref = profile.workoutVolumePreference ?? (profile.goal === 'fat_loss' ? 'compact' : 'standard');
         const showCoreCircuit = volumePref !== 'high';

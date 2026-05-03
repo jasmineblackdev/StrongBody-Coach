@@ -19,6 +19,27 @@ export type FatLossMode = 'conservative' | 'standard' | 'performance';
  *   high      ≈ 8–9 exercises  (legacy / hypertrophy block)
  */
 export type WorkoutVolumePreference = 'compact' | 'standard' | 'high';
+
+/**
+ * Three-day home Core + Cardio rotation. Lives on rest/cardio days,
+ * never on lift days.
+ *
+ *   home_a_upper      Upper abs + boxing HIIT
+ *   home_b_lower      Lower abs + steady-state bike
+ *   home_c_stability  Core stability + treadmill intervals (no incline)
+ */
+export type CoreCardioDay = 'home_a_upper' | 'home_b_lower' | 'home_c_stability';
+
+/**
+ * 4-week core progression cycle. Auto-derived from store.getWeekNumber()
+ * via ((weekNumber - 1) % 4) + 1.
+ *
+ *   1  form / control
+ *   2  volume
+ *   3  strength / tension
+ *   4  challenge
+ */
+export type CoreProgressionWeek = 1 | 2 | 3 | 4;
 export type WorkoutDay =
   | 'squat'
   | 'bench'
