@@ -24,6 +24,7 @@ import { buildDailyPlan } from '../lib/mealPlan';
 import { dayLabel } from '../lib/workoutPlan';
 import CoachDecisionCard from '../components/CoachDecisionCard';
 import FatLossInsightCard from '../components/FatLossInsightCard';
+import PhotoSignalCard from '../components/PhotoSignalCard';
 import type { WorkoutDay, WorkoutSession } from '../types';
 
 function todayWorkout(weekNumber: number): WorkoutSession | null {
@@ -276,6 +277,10 @@ export default function Dashboard() {
       {/* Female-aware fat-loss interpretation — sits ABOVE the Coach
           Decision so the user sees the trend read before the action. */}
       <FatLossInsightCard />
+
+      {/* Photo signal — only shows when the user has at least one photo
+          set logged. Single-line read with a link to the Progress page. */}
+      <PhotoSignalCard />
 
       {/* Coach Brain weekly decision — pending decisions surface here as
           Accept / Reject. Hides itself when there is no decision yet. */}

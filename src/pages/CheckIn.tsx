@@ -23,6 +23,7 @@ import type {
   AdherenceLevel,
   CoachDecision,
   CyclePhase,
+  PhotoVisualSignal,
   WeeklyCheckIn,
 } from '../types';
 
@@ -65,6 +66,7 @@ export default function CheckInPage() {
     whatWorked: '',
     whatNeedsAdjustment: '',
     cyclePhase: undefined,
+    photoVisualSignal: undefined,
   });
 
   function update<K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) {
@@ -402,6 +404,36 @@ export default function CheckInPage() {
             <p className="mt-1 text-[11px] text-zinc-500">
               When you're in luteal/menstrual, the engine holds calorie cuts
               instead of mistaking water retention for a plateau.
+            </p>
+          </Field>
+
+          <Field label="Did your progress photos look different this week? (optional)">
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { key: undefined, label: 'Skip' },
+                  { key: 'tighter_waist', label: 'Tighter waist' },
+                  { key: 'less_bloated', label: 'Less bloated' },
+                  { key: 'no_change', label: 'No visible change' },
+                  { key: 'unsure', label: 'Unsure' },
+                ] as { key: PhotoVisualSignal | undefined; label: string }[]
+              ).map((opt) => {
+                const active = draft.photoVisualSignal === opt.key;
+                return (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => update('photoVisualSignal', opt.key)}
+                    className={`btn ${active ? 'btn-primary' : 'btn-outline'}`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[11px] text-zinc-500">
+              Self-reported. Photo Intelligence cross-references this with the
+              measured weight + waist deltas — never as a primary signal.
             </p>
           </Field>
         </div>

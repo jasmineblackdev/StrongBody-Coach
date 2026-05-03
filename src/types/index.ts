@@ -253,6 +253,17 @@ export type AdherenceLevel = 'yes' | 'mostly' | 'no';
 
 export type CyclePhase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
 
+/**
+ * Self-reported answer to "did your progress photos look different this
+ * week?" — feeds the Photo Intelligence engine alongside measured data
+ * (weight, waist) without ever driving plan changes alone.
+ */
+export type PhotoVisualSignal =
+  | 'tighter_waist'
+  | 'less_bloated'
+  | 'no_change'
+  | 'unsure';
+
 export interface WeeklyCheckIn {
   id: string;
   /** ISO date string (YYYY-MM-DD or full ISO). */
@@ -275,6 +286,12 @@ export interface WeeklyCheckIn {
    * mislabeling water retention as a plateau.
    */
   cyclePhase?: CyclePhase;
+  /**
+   * Optional user-reported visual signal from progress photos this week.
+   * Feeds Photo Intelligence as supportive evidence — never drives plan
+   * changes on its own.
+   */
+  photoVisualSignal?: PhotoVisualSignal;
 }
 
 // ─── Coach Brain (weekly decision engine) ──────────────────────────────────

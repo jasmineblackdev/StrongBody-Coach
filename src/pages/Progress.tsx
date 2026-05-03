@@ -8,7 +8,7 @@ import { detectWeakPoints } from '../lib/weakPoints';
 import { buildDailyPlan } from '../lib/mealPlan';
 import { matchesMainLift } from '../lib/strengthEngine';
 import ProgressPhotoPanel from '../components/ProgressPhotoPanel';
-import PhotoAnalysisPanel from '../components/PhotoAnalysisPanel';
+import PhotoIntelligencePanel from '../components/PhotoIntelligencePanel';
 import type { BodyMetric } from '../types';
 
 export default function ProgressPage() {
@@ -246,7 +246,7 @@ export default function ProgressPage() {
         </div>
 
         <div className="lg:col-span-3">
-          <PhotoAnalysisPanel />
+          <PhotoIntelligencePanel />
         </div>
       </div>
     </div>
