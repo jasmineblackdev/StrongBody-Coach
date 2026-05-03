@@ -33,6 +33,7 @@ import type { WeightTrendReport } from './weightTrendEngine';
 import type { ReadinessReport } from './recoveryEngine';
 import type { LiftEstimate, LiftKey } from './strengthEngine';
 import type { InjuryRiskReport } from './ml/injuryRisk';
+import type { FemaleFatLossReport } from './femaleFatLossEngine';
 import { computeAdherence } from './adherenceEngine';
 import { store } from './storage';
 import { buildWeeklyPlan } from './workoutPlan';
@@ -48,6 +49,17 @@ export interface WeeklyDecisionInput {
   injuryRisk: InjuryRiskReport;
   recentLogs: WorkoutLog[];
   lastCheckIn?: WeeklyCheckIn;
+  /**
+   * Optional female-aware report. When provided, the Coach Brain consults
+   * it BEFORE running its own decision tree:
+   *   - If `overrideDecision === true` and a forcedDecision is set, the
+   *     Coach Brain emits that forced decision with the female report's
+   *     reason copy.
+   *   - Even when overrideDecision is false, blockedActions are honored —
+   *     the brain won't recommend reduce_calories if the female layer is
+   *     blocking it (water retention, false plateau, hormonal hunger, etc.).
+   */
+  femaleReport?: FemaleFatLossReport;
 }
 
 interface DecisionContext extends WeeklyDecisionInput {
@@ -61,13 +73,29 @@ interface DecisionContext extends WeeklyDecisionInput {
   weightConfidence: WeightTrendReport['confidence'];
 }
 
+function isBlocked(
+  ctx: DecisionContext,
+  kind: CoachDecisionKind,
+): boolean {
+  const blocked = ctx.femaleReport?.blockedActions ?? [];
+  if (
+    kind === 'reduce_calories' &&
+    blocked.includes('reduce_calories')
+  )
+    return true;
+  if (kind === 'shift_carbs' && blocked.includes('shift_carbs')) return true;
+  if (kind === 'increase_steps' && blocked.includes('increase_steps')) return true;
+  return false;
+}
+
 // ─── Decision logic ────────────────────────────────────────────────────────
 
 export function decideThisWeek(input: WeeklyDecisionInput): CoachDecision {
   const ctx = buildContext(input);
 
   // Pain — most safety-critical. Lower-back gets a swap recommendation;
-  // anything else high-risk gets a deload.
+  // anything else high-risk gets a deload. These bypass the female layer
+  // because pain has nothing to do with cycle/water — it's a hard stop.
   const painLowerBack = hasPain(ctx.recentLogs, /low.?back|lumbar/i);
   const painShoulder = hasPain(ctx.recentLogs, /shoulder|rotator|delt/i);
   const painKnee = hasPain(ctx.recentLogs, /knee|patell/i);
@@ -77,9 +105,18 @@ export function decideThisWeek(input: WeeklyDecisionInput): CoachDecision {
     return deload(ctx, ctx.injuryRisk.flags.slice(0, 2));
   }
 
-  // Strength regressing + recovery struggling → drop volume before deloading
+  // Strength regressing + recovery struggling → drop volume before deloading.
+  // Also bypasses the female layer for the same reason — strength regression
+  // is mechanical fatigue, not hormonal noise.
   if (ctx.recovery.score < 60 && ctx.regressingLifts.length >= 1) {
     return reduceTrainingVolume(ctx);
+  }
+
+  // Female fat-loss override — only fires AFTER pain/injury checks. When
+  // the female layer says water retention / false plateau / hormonal
+  // hunger / mid-cycle caution, we emit its forced decision and stop.
+  if (ctx.femaleReport?.overrideDecision && ctx.femaleReport.forcedDecision) {
+    return forcedFromFemaleReport(ctx);
   }
 
   // Not enough data — be honest about it instead of guessing
@@ -101,9 +138,9 @@ export function decideThisWeek(input: WeeklyDecisionInput): CoachDecision {
     ctx.weightTrend.trend === 'stable' ||
     ctx.weightTrend.trend === 'gaining'
   ) {
-    // Bloating dominates the next two checks — never cut food when the
-    // signal could be GI-driven instead of energy-balance.
-    if (ctx.bloating >= 7) {
+    // Bloating gate — same intent as the female layer's water_retention
+    // detector but kept here for users without an active femaleReport.
+    if (ctx.bloating >= 7 && !isBlocked(ctx, 'shift_carbs')) {
       return reviewFoodTriggers(ctx);
     }
 
@@ -111,11 +148,18 @@ export function decideThisWeek(input: WeeklyDecisionInput): CoachDecision {
       return improveAdherence(ctx);
     }
 
-    if (ctx.hunger >= 7) {
+    if (ctx.hunger >= 7 && !isBlocked(ctx, 'increase_steps')) {
       return increaseSteps(ctx);
     }
 
-    return reduceCalories(ctx);
+    // Reduce calories is the LAST resort here — and it's blockable by
+    // the female layer when water/bloat/hormones say otherwise.
+    if (!isBlocked(ctx, 'reduce_calories')) {
+      return reduceCalories(ctx);
+    }
+    // Female layer is blocking the cut but didn't override — fall through
+    // to stay_course with the female reasoning attached.
+    return stayCourseWithFemaleNote(ctx);
   }
 
   // Losing in the sweet spot — keep going, reset any prior offset
@@ -288,6 +332,82 @@ function cryptoRandomId(): string {
     return crypto.randomUUID();
   }
   return `cd_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Emit a decision the female layer forced — water retention, false plateau,
+ * hormonal hunger, mid-cycle caution. The Coach Brain trusts the female
+ * report's reason copy and just attaches the right kind + safety notes.
+ */
+function forcedFromFemaleReport(ctx: DecisionContext): CoachDecision {
+  const fr = ctx.femaleReport!;
+  const forced = fr.forcedDecision!;
+  if (forced.kind === 'increase_steps') {
+    const decision = increaseSteps(ctx);
+    return {
+      ...decision,
+      headline: fr.headline,
+      reason: forced.reason,
+      safetyNotes: [
+        'Female fat-loss layer flagged this week as hormonal — never cut food into a hunger spike.',
+        ...decision.safetyNotes.filter(
+          (s) => !/hunger.+spike|food.+hunger/i.test(s),
+        ),
+      ],
+    };
+  }
+  // stay_course path — water retention, false plateau, mid-cycle caution.
+  const offset = ctx.profile.calorieOffsetKcal ?? 0;
+  const changes: SuggestedChange[] = [];
+  if (offset !== 0) {
+    changes.push({
+      kind: 'macro_adjust',
+      description: `Reset prior coach offset (currently ${offset > 0 ? '+' : ''}${offset} kcal) back to 0 — let the body settle.`,
+      payload: { calorieOffsetKcal: 0 },
+    });
+  }
+  changes.push({
+    kind: 'behavior',
+    description: fr.recommendedAction,
+  });
+  return base(
+    ctx,
+    'stay_course',
+    fr.headline,
+    forced.reason,
+    changes,
+    [
+      'Female fat-loss layer is blocking calorie cuts this week — water + hormonal noise should not drive subtraction.',
+      'Re-check in 5–7 days; the smoothed trend is what we trust.',
+    ],
+  );
+}
+
+/**
+ * Used when the female layer has blocked reduce_calories without
+ * forcing an explicit decision (rare edge case — e.g., flat trend with
+ * a non-override blockedActions list). We stay_course with the female
+ * explanation attached.
+ */
+function stayCourseWithFemaleNote(ctx: DecisionContext): CoachDecision {
+  const fr = ctx.femaleReport;
+  const note =
+    fr?.explanation ??
+    'Female layer is blocking a calorie cut this week. Hold targets and re-check next week.';
+  const changes: SuggestedChange[] = [
+    {
+      kind: 'behavior',
+      description: fr?.recommendedAction ?? 'Hold targets steady. Re-check next week.',
+    },
+  ];
+  return base(
+    ctx,
+    'stay_course',
+    fr?.headline ?? 'Stay the course',
+    note,
+    changes,
+    ['Hormonal / water-retention noise should not drive a calorie cut.'],
+  );
 }
 
 function stayCourse(ctx: DecisionContext): CoachDecision {

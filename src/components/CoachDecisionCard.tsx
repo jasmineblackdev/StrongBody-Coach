@@ -12,6 +12,7 @@ import { computeWeightTrend } from '../lib/weightTrendEngine';
 import { computeReadiness } from '../lib/recoveryEngine';
 import { estimateAllLifts } from '../lib/strengthEngine';
 import { assessInjuryRisk } from '../lib/ml/injuryRisk';
+import { analyzeFemaleFatLoss } from '../lib/femaleFatLossEngine';
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import type { CoachDecision } from '../types';
@@ -62,6 +63,11 @@ export function buildLatestDecision(): CoachDecision | null {
     },
   });
   const injuryRisk = assessInjuryRisk(logs);
+  const femaleReport = analyzeFemaleFatLoss({
+    metrics,
+    recentLogs: logs,
+    checkIns: store.getCheckIns(),
+  });
   return decideThisWeek({
     profile,
     weekNumber: store.getWeekNumber(),
@@ -71,6 +77,7 @@ export function buildLatestDecision(): CoachDecision | null {
     injuryRisk,
     recentLogs: logs,
     lastCheckIn,
+    femaleReport,
   });
 }
 

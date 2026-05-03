@@ -17,8 +17,14 @@ import { computeReadiness } from '../lib/recoveryEngine';
 import { estimateAllLifts } from '../lib/strengthEngine';
 import { assessInjuryRisk } from '../lib/ml/injuryRisk';
 import { decideThisWeek } from '../lib/weeklyDecisionEngine';
+import { analyzeFemaleFatLoss } from '../lib/femaleFatLossEngine';
 import CoachDecisionCard from '../components/CoachDecisionCard';
-import type { AdherenceLevel, CoachDecision, WeeklyCheckIn } from '../types';
+import type {
+  AdherenceLevel,
+  CoachDecision,
+  CyclePhase,
+  WeeklyCheckIn,
+} from '../types';
 
 const ADHERENCE: AdherenceLevel[] = ['yes', 'mostly', 'no'];
 const ADHERENCE_LABEL: Record<AdherenceLevel, string> = {
@@ -58,6 +64,7 @@ export default function CheckInPage() {
     energyRecovery: 6,
     whatWorked: '',
     whatNeedsAdjustment: '',
+    cyclePhase: undefined,
   });
 
   function update<K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) {
@@ -76,6 +83,13 @@ export default function CheckInPage() {
     // check-in. Persist it as pending — it stays pending until the user
     // accepts or rejects via the CoachDecisionCard.
     const freshTrend = computeWeightTrend(metrics, profile);
+    const femaleReport = analyzeFemaleFatLoss({
+      metrics,
+      recentLogs: logs,
+      // Include the just-submitted check-in so cycle phase / hunger /
+      // bloating land in the analysis on the same render.
+      checkIns: [entry, ...checkIns],
+    });
     const decision = decideThisWeek({
       profile,
       weekNumber: store.getWeekNumber(),
@@ -91,6 +105,7 @@ export default function CheckInPage() {
       injuryRisk: assessInjuryRisk(logs),
       recentLogs: logs,
       lastCheckIn: entry,
+      femaleReport,
     });
     store.addCoachDecision(decision);
     setCoachDecision(decision);
@@ -358,6 +373,36 @@ export default function CheckInPage() {
               value={draft.bowelNotes}
               onChange={(e) => update('bowelNotes', e.target.value)}
             />
+          </Field>
+
+          <Field label="Cycle phase (optional — improves the female fat-loss read)">
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { key: undefined, label: 'Skip' },
+                  { key: 'menstrual', label: 'Menstrual' },
+                  { key: 'follicular', label: 'Follicular' },
+                  { key: 'ovulation', label: 'Ovulation' },
+                  { key: 'luteal', label: 'Luteal' },
+                ] as { key: CyclePhase | undefined; label: string }[]
+              ).map((opt) => {
+                const active = draft.cyclePhase === opt.key;
+                return (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    onClick={() => update('cyclePhase', opt.key)}
+                    className={`btn ${active ? 'btn-primary' : 'btn-outline'}`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[11px] text-zinc-500">
+              When you're in luteal/menstrual, the engine holds calorie cuts
+              instead of mistaking water retention for a plateau.
+            </p>
           </Field>
         </div>
       </Card>

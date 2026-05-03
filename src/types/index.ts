@@ -251,6 +251,8 @@ export interface PlanProposal {
 
 export type AdherenceLevel = 'yes' | 'mostly' | 'no';
 
+export type CyclePhase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
+
 export interface WeeklyCheckIn {
   id: string;
   /** ISO date string (YYYY-MM-DD or full ISO). */
@@ -267,6 +269,12 @@ export interface WeeklyCheckIn {
   energyRecovery: number; // 1–10
   whatWorked: string;
   whatNeedsAdjustment: string;
+  /**
+   * Optional self-reported menstrual cycle phase. Lets the female fat-loss
+   * engine apply caution during luteal/menstrual weeks instead of
+   * mislabeling water retention as a plateau.
+   */
+  cyclePhase?: CyclePhase;
 }
 
 // ─── Coach Brain (weekly decision engine) ──────────────────────────────────
