@@ -28,6 +28,8 @@ import FatLossInsightCard from '../components/FatLossInsightCard';
 import FatLossTimelineCard from '../components/FatLossTimelineCard';
 import PhotoSignalCard from '../components/PhotoSignalCard';
 import HomeSessionCard from '../components/HomeSessionCard';
+import TodayCoachAction from '../components/TodayCoachAction';
+import TodayMealsSummary from '../components/TodayMealsSummary';
 import type { WorkoutDay, WorkoutSession } from '../types';
 
 function todayWorkout(weekNumber: number): WorkoutSession | null {
@@ -326,6 +328,71 @@ export default function Dashboard() {
         </div>
       </header>
 
+      {/* Today's workout — top 3 exercises only as "focus points", with
+          a Start CTA. Full session detail lives on /log + /plan. */}
+      {todays && !gymMode && (
+        <div className="rounded-2xl border border-ink-800 bg-ink-850 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                Top focus today
+              </div>
+              <div className="text-sm font-bold text-zinc-100">
+                {dayLabel[todays.day]}
+              </div>
+            </div>
+            <Link to="/log" className="btn-primary">
+              <Dumbbell size={14} /> Start
+            </Link>
+          </div>
+          <ul className="mt-3 space-y-1.5 text-sm">
+            {todays.prescriptions.slice(0, 3).map((p) => (
+              <li
+                key={p.name}
+                className="flex items-baseline justify-between gap-2"
+              >
+                <span className="truncate text-zinc-100">{p.name}</span>
+                <span className="shrink-0 text-zinc-400 text-xs">
+                  {p.sets}×{p.reps}
+                  {p.loadLbs ? ` · ${p.loadLbs} lb` : ''}
+                </span>
+              </li>
+            ))}
+            {todays.prescriptions.length > 3 && (
+              <li className="text-[11px] text-zinc-500">
+                + {todays.prescriptions.length - 3} more in this session
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      {/* Coach Insights — everything analysis-heavy collapses here so
+          the Today screen stays focused on action. Default closed; user
+          opens to dig into goal banner, predictions, decisions, charts,
+          weak points, etc. Hidden entirely in Gym Mode. */}
+      {!gymMode && (
+      <details className="group rounded-2xl border border-ink-800 bg-ink-850/50">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-accent/15 text-rose-glow">
+              <Sparkles size={16} />
+            </span>
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                Coach Insights
+              </div>
+              <div className="text-sm font-bold text-zinc-100">
+                Goal · trend · forecasts · history
+              </div>
+            </div>
+          </div>
+          <span className="text-[10px] text-zinc-500 group-open:hidden">Show</span>
+          <span className="hidden text-[10px] text-zinc-500 group-open:inline">Hide</span>
+        </summary>
+
+        <div className="space-y-6 border-t border-ink-800 p-4">
+
       {/* Goal banner — the headline of fat-loss progress */}
       <Card className="border-accent/20">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -389,39 +456,11 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* Fat Loss Timeline — hidden in Gym Mode like the other coaching
-          cards. Self-hides when goal !== fat_loss. */}
-      {!gymMode && <FatLossTimelineCard />}
+      {/* Today's coach action — single line, expandable for full reasoning. */}
+      {!gymMode && <TodayCoachAction />}
 
-      {/* Heavy AI / coaching cards — hidden entirely in Gym Mode so the
-          mid-session view only shows what matters at the bar. */}
-      {!gymMode && (
-        <>
-          {/* AI coach summary — weekly read in 3–5 sentences */}
-          <CoachMessage tone={coachSummary.tone} title="Coach's read this week">
-            <div className="space-y-1.5">
-              {coachSummary.sentences.map((s, i) => (
-                <p key={i}>{s}</p>
-              ))}
-            </div>
-            {fatLoss.daysSinceLastCheckIn != null && (
-              <div className="mt-2 text-xs opacity-80">
-                Last check-in {fatLoss.daysSinceLastCheckIn} day
-                {fatLoss.daysSinceLastCheckIn === 1 ? '' : 's'} ago
-                {fatLoss.shouldRunNow ? ' — due for a fresh one.' : '.'}
-              </div>
-            )}
-          </CoachMessage>
-
-          {/* Female-aware fat-loss interpretation — sits ABOVE the Coach
-              Decision so the user sees the trend read before the action. */}
-          <FatLossInsightCard />
-
-          {/* Photo signal — only shows when the user has at least one photo
-              set logged. Single-line read with a link to the Progress page. */}
-          <PhotoSignalCard />
-        </>
-      )}
+      {/* Today's meals — compact summary, links to /meals for detail. */}
+      {!gymMode && <TodayMealsSummary />}
 
       {!gymMode && (
         <>
@@ -814,6 +853,10 @@ export default function Dashboard() {
           )}
         </Card>
       </div>
+
+        </div>{/* /Coach Insights inner padding */}
+      </details>
+      )}{/* /!gymMode Coach Insights */}
     </div>
   );
 }

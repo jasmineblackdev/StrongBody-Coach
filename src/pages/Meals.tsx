@@ -113,32 +113,56 @@ export default function MealsPage() {
         </Card>
 
         <Card className="md:col-span-2">
-          <SectionHeader title="Meals" subtitle="Tap any meal for swap suggestions" />
-          <div className="space-y-3">
+          <SectionHeader
+            title="What to eat today"
+            subtitle="Tap a meal for ingredients + macros"
+          />
+          <div className="space-y-2">
             {plan.meals.map((m, i) => (
-              <div key={i} className="rounded-2xl border border-ink-800 bg-ink-850 p-4">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div>
-                    <div className="font-semibold text-zinc-100">
-                      Meal {i + 1} · {m.name}
+              <details
+                key={i}
+                className="group rounded-2xl border border-ink-800 bg-ink-850 transition open:border-accent/30"
+              >
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                      {m.name.split(' · ')[0]}
                     </div>
-                    <div className="text-xs text-zinc-400">
-                      {m.calories} kcal · P {m.proteinG} / C {m.carbsG} / F {m.fatG}
+                    <div className="truncate text-sm font-bold text-zinc-100">
+                      {m.name.split(' · ').slice(1).join(' · ') || m.name}
                     </div>
                   </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-right">
+                      <span className="block text-sm font-semibold text-zinc-100">
+                        {m.calories} kcal
+                      </span>
+                      <span className="block text-[10px] text-zinc-500">
+                        P{m.proteinG} g
+                      </span>
+                    </span>
+                    {m.swap && <Pill tone="accent">swap</Pill>}
+                  </div>
+                </summary>
+                <div className="border-t border-ink-800 px-3 py-3 text-sm">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                    Ingredients
+                  </div>
+                  <ul className="mt-1 grid grid-cols-1 gap-y-0.5 text-zinc-200 sm:grid-cols-2">
+                    {m.ingredients.map((ing) => (
+                      <li key={ing}>• {ing}</li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 rounded-lg border border-ink-800 bg-ink-900/40 px-2 py-1.5 text-xs text-zinc-300">
+                    Full macros: P {m.proteinG} g · C {m.carbsG} g · F {m.fatG} g
+                  </div>
                   {m.swap && (
-                    <Pill tone="accent" >
-                      swap
-                    </Pill>
+                    <div className="mt-2 rounded-lg border border-accent/30 bg-accent/5 px-2 py-1.5 text-xs text-rose-glow">
+                      Swap: {m.swap}
+                    </div>
                   )}
                 </div>
-                <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-zinc-300">
-                  {m.ingredients.map((ing) => (
-                    <li key={ing}>• {ing}</li>
-                  ))}
-                </ul>
-                {m.swap && <div className="mt-2 text-xs text-rose-glow">Swap: {m.swap}</div>}
-              </div>
+              </details>
             ))}
           </div>
         </Card>
@@ -148,15 +172,24 @@ export default function MealsPage() {
         </div>
 
         <Card className="md:col-span-3">
-          <SectionHeader title="Grocery list" subtitle="Generated from your meals" />
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-zinc-300 sm:grid-cols-3 md:grid-cols-4">
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+              <div>
+                <h2 className="h2">Grocery list</h2>
+                <p className="muted text-sm mt-0.5">{plan.groceryList.length} items · generated from your meals</p>
+              </div>
+              <span className="text-xs text-zinc-500 group-open:hidden">Show</span>
+              <span className="hidden text-xs text-zinc-500 group-open:inline">Hide</span>
+            </summary>
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-zinc-300 sm:grid-cols-3 md:grid-cols-4">
             {plan.groceryList.map((g) => (
               <label key={g} className="inline-flex items-start gap-2">
                 <input type="checkbox" className="mt-1 h-4 w-4 accent-pink-500" />
                 <span>{g}</span>
               </label>
             ))}
-          </div>
+            </div>
+          </details>
         </Card>
       </div>
     </div>

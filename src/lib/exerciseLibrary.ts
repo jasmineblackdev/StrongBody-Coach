@@ -34,6 +34,14 @@ export interface ExerciseEntry {
   difficultyLevel: DifficultyLevel;
   videoUrl?: string;
   imageUrl?: string;
+  /**
+   * Curated YouTube video ID (the 11-char code from the URL, not the full
+   * watch URL). When set, the ExerciseDetailsModal renders an embedded
+   * iframe player so the user can watch the demo without leaving the app.
+   * When unset, the modal falls back to a YouTube search button using a
+   * channel-specific query.
+   */
+  youtubeId?: string;
 }
 
 const LIBRARY: ExerciseEntry[] = [

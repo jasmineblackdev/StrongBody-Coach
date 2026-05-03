@@ -131,16 +131,22 @@ export default function ExerciseDetailsModal({
         </header>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-          {/* Video — always available. We don't ship a YouTube/wger API
-              integration; instead the button opens a YouTube search for
-              "<exercise> proper form" in a new tab. Works in the gym on
-              mobile, no key, no rate limit, no extra cost. If a curated
-              videoUrl is ever added to an entry, that wins. */}
-          <VideoBlock
-            url={entry?.videoUrl ?? buildYouTubeSearchUrl(entry?.name ?? exerciseName)}
-            label={entry?.videoUrl ? 'Watch demo' : 'Watch on YouTube'}
-            imageUrl={entry?.imageUrl}
-          />
+          {/* Video — three modes, in order of preference:
+              1. Embedded iframe when entry has a curated youtubeId
+              2. Big "Watch demo" button when entry has a curated videoUrl
+              3. "Watch on YouTube" search-fallback button (channel-tuned
+                 query) when neither is set
+              The iframe gives a direct playable video right in the modal —
+              no leaving the app. */}
+          {entry?.youtubeId ? (
+            <VideoEmbed youtubeId={entry.youtubeId} title={entry.name} />
+          ) : (
+            <VideoBlock
+              url={entry?.videoUrl ?? buildYouTubeSearchUrl(entry?.name ?? exerciseName)}
+              label={entry?.videoUrl ? 'Watch demo' : 'Watch on YouTube'}
+              imageUrl={entry?.imageUrl}
+            />
+          )}
 
           {/* Trainer rationale — "why this exercise was chosen". Only
               renders when the modal was opened from a prescription on the
@@ -416,12 +422,35 @@ function CollapsibleSection({
 
 /**
  * Build a YouTube search URL for the exercise. No API call, just a
- * normal search query that opens in a new tab — works on every device,
- * including phones in the gym, with zero auth or quota.
+ * normal search query that opens in a new tab. Tuned to surface
+ * coaching-channel results (Squat University, Renaissance Periodization,
+ * AthleanX) before random gym fail compilations.
  */
 function buildYouTubeSearchUrl(name: string): string {
-  const q = encodeURIComponent(`${name} proper form`);
+  const q = encodeURIComponent(`${name} form Squat University`);
   return `https://www.youtube.com/results?search_query=${q}`;
+}
+
+/**
+ * Embed a curated YouTube video right in the modal. youtu.be / youtube.com
+ * embed URL — no API key, no auth, no quota. Aspect ratio 16/9 with a
+ * subtle accent border so the video is the visual anchor of the modal.
+ */
+function VideoEmbed({ youtubeId, title }: { youtubeId: string; title: string }) {
+  const src = `https://www.youtube.com/embed/${encodeURIComponent(youtubeId)}?rel=0&modestbranding=1`;
+  return (
+    <div className="aspect-video w-full overflow-hidden rounded-xl border-2 border-accent/40 bg-ink-950">
+      <iframe
+        src={src}
+        title={`${title} — form demo`}
+        className="h-full w-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        loading="lazy"
+        referrerPolicy="strict-origin-when-cross-origin"
+      />
+    </div>
+  );
 }
 
 function VideoBlock({
