@@ -14,6 +14,8 @@ import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
 import RestTimer from '../components/RestTimer';
 import FormRiskPanel from '../components/FormRiskPanel';
 import ExerciseDetailsModal from '../components/ExerciseDetailsModal';
+import { explainPrescription } from '../lib/trainerPrescription';
+import { detectWeakPoints } from '../lib/weakPoints';
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import { dayLabel } from '../lib/workoutPlan';
@@ -90,6 +92,35 @@ export default function WorkoutLoggerPage() {
   const [savedLog, setSavedLog] = useState<WorkoutLog | null>(null);
   const [proposalChangeCount, setProposalChangeCount] = useState<number | null>(null);
 
+  // Last-time-you-did-this-exercise lookup. Reads logs once per render
+  // and indexes by prescription name so each exercise card can show
+  // "Last time: 5 × 145 lb · RPE 8" as a ghost above the inputs.
+  const lastTimeByExercise = useMemo(() => {
+    const allLogs = store.getLogs();
+    const map = new Map<
+      string,
+      { date: string; topReps: number; topWeight: number; topRpe?: number }
+    >();
+    for (const log of allLogs) {
+      for (const ex of log.exercises) {
+        if (map.has(ex.prescriptionName)) continue; // newest wins, logs are newest-first
+        const heaviest = ex.sets.reduce<typeof ex.sets[number] | null>(
+          (acc, s) => (!acc || s.weight > acc.weight ? s : acc),
+          null,
+        );
+        if (heaviest && heaviest.weight > 0) {
+          map.set(ex.prescriptionName, {
+            date: log.date,
+            topReps: heaviest.reps,
+            topWeight: heaviest.weight,
+            topRpe: heaviest.rpe,
+          });
+        }
+      }
+    }
+    return map;
+  }, []);
+
   // Rest timer state — armed (with a fresh ID) when the user logs a set.
   // Bumping armedAt to a new value resets and auto-starts the timer.
   const [restArmedAt, setRestArmedAt] = useState<number | null>(null);
@@ -103,6 +134,16 @@ export default function WorkoutLoggerPage() {
   // painNotes and shows a warning. UI shows which flags have been tapped
   // for the current session.
   const [activeFlags, setActiveFlags] = useState<Record<number, Set<string>>>({});
+
+  const gymMode = profile.gymMode === true;
+
+  // "Current exercise" for the sticky Gym Mode bar = whichever exercise
+  // the user just logged a set on (via Done). Falls back to the first
+  // exercise in the session before any set is logged.
+  const currentExercise =
+    restExerciseIdx !== null
+      ? session.prescriptions[restExerciseIdx]?.name
+      : session.prescriptions[0]?.name;
 
   function changeSession(id: string) {
     setSessionId(id);
@@ -277,6 +318,20 @@ export default function WorkoutLoggerPage() {
                       {pres.loadLbs ? <> · <span className="font-semibold text-zinc-100">{pres.loadLbs} lb</span></> : null}
                       {pres.rpeTarget ? ` · RPE ${pres.rpeTarget}` : ''}
                     </div>
+                    {(() => {
+                      const last = lastTimeByExercise.get(pres.name);
+                      if (!last) return null;
+                      const dateLabel = last.date.slice(0, 10);
+                      return (
+                        <div className="mt-0.5 text-xs text-zinc-500">
+                          Last time ({dateLabel}):{' '}
+                          <span className="font-semibold text-zinc-300">
+                            {last.topReps} × {last.topWeight} lb
+                          </span>
+                          {last.topRpe ? ` · RPE ${last.topRpe}` : ''}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
@@ -330,14 +385,35 @@ export default function WorkoutLoggerPage() {
                       );
                     })}
                   </div>
-                  {(activeFlags[exIdx]?.size ?? 0) > 0 && (
-                    <div className="mt-2 rounded-xl border border-danger/30 bg-danger/10 p-2.5 text-xs text-zinc-100">
-                      <AlertTriangle size={12} className="inline mr-1 text-danger" />
-                      <span className="font-semibold">Do not increase load.</span>{' '}
-                      Use a safer variation. The next session's coach decision
-                      will see this flag and gate strength forecasts.
-                    </div>
-                  )}
+                  {(activeFlags[exIdx]?.size ?? 0) > 0 && (() => {
+                    const rationale = explainPrescription(pres, {
+                      profile,
+                      phase: session.phase,
+                      weakPoints: detectWeakPoints(store.getLogs()),
+                    });
+                    const topSwap = rationale.alternates[0];
+                    return (
+                      <div className="mt-2 rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs text-zinc-100">
+                        <div>
+                          <AlertTriangle size={12} className="inline mr-1 text-danger" />
+                          <span className="font-semibold">Do not increase load.</span>{' '}
+                          Use a safer variation. The next session's coach decision
+                          will see this flag and gate strength forecasts.
+                        </div>
+                        {topSwap && (
+                          <div className="mt-2 rounded-lg border border-warning/30 bg-warning/10 p-2">
+                            <div className="text-[11px] font-semibold uppercase tracking-wider text-warning">
+                              Suggested swap
+                            </div>
+                            <div className="mt-0.5 text-zinc-100">
+                              <span className="font-semibold">{topSwap.name}</span>
+                              <span className="text-zinc-300"> — {topSwap.reason}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Header row — desktop only; mobile uses inline labels per input */}
@@ -598,6 +674,36 @@ export default function WorkoutLoggerPage() {
           phase={session.phase}
           onClose={() => setFormExercise(null)}
         />
+      )}
+
+      {/* Sticky Gym Mode bottom bar — only when Gym Mode is on AND we haven't
+          finished saving. Shows current exercise + rest summary + Finish.
+          Stacks above bottom mobile nav (which sits at bottom-0). */}
+      {gymMode && !savedLog && (
+        <div
+          className="fixed left-0 right-0 z-30 border-t-2 border-accent/40 bg-ink-900/95 px-3 py-3 shadow-glow backdrop-blur md:left-64"
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom) + 64px)',
+          }}
+        >
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-glow">
+                {restArmedAt !== null ? 'Resting' : 'Current'}
+              </div>
+              <div className="truncate text-sm font-bold text-zinc-100">
+                {currentExercise ?? '—'}
+              </div>
+            </div>
+            <button
+              onClick={save}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-white shadow-glow active:scale-95"
+              aria-label="Finish workout and save"
+            >
+              <Save size={14} /> Finish
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

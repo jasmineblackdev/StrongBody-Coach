@@ -11,6 +11,7 @@ import { findExercise } from '../lib/exerciseLibrary';
 import { forecastAllLifts } from '../lib/ml/strengthForecaster';
 import { assessInjuryRisk, RISK_TONE } from '../lib/ml/injuryRisk';
 import { computeReadiness } from '../lib/recoveryEngine';
+import GymModeToggle from '../components/GymModeToggle';
 import type { PlanProposal, TrainingPhase, WorkoutSession } from '../types';
 
 const PHASES: TrainingPhase[] = ['hypertrophy', 'strength', 'peak', 'deload'];
@@ -144,6 +145,7 @@ export default function WorkoutPlanPage() {
           <button onClick={persistAndContinue} className="btn-primary">
             <RefreshCw size={16} /> Save plan
           </button>
+          <GymModeToggle />
         </div>
       </header>
 

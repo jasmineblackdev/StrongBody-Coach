@@ -176,12 +176,12 @@ export default function Dashboard() {
               {todays ? 'Today' : 'Rest day'}
             </div>
             <div className="mt-0.5 truncate font-display text-xl font-bold text-zinc-100">
-              {todays ? `Start ${dayLabel[todays.day]}` : 'Walk + protein + recovery'}
+              {todays ? `Start ${dayLabel[todays.day]}` : 'Recover and refuel'}
             </div>
             <div className="mt-0.5 text-xs text-zinc-300">
               {todays
                 ? `${todays.prescriptions.length} exercises · ${plan.phase} block`
-                : 'Log a measurement, hydrate, and prep tomorrow.'}
+                : `${profile.dailyStepsTarget ?? 8000} steps · protein at every meal · log weight`}
             </div>
           </div>
           <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-glow">
@@ -201,6 +201,60 @@ export default function Dashboard() {
           Gym Mode {gymMode ? 'ON' : 'OFF'}
         </button>
       </div>
+
+      {/* Rest-day plan card — only when no workout today. Concrete steps /
+          cardio / recovery / meal-timing reminder so the rest day still
+          has structure. */}
+      {!todays && (
+        <Card>
+          <SectionHeader
+            title="Rest day plan"
+            subtitle="Today is a recovery day — don't waste it"
+            action={<Pill tone="accent">recovery</Pill>}
+          />
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+              <div className="text-[11px] uppercase tracking-wider text-zinc-400">
+                Movement
+              </div>
+              <div className="mt-1 text-sm font-semibold text-zinc-100">
+                {profile.dailyStepsTarget ?? 8000} steps
+              </div>
+              <div className="mt-0.5 text-xs text-zinc-400">
+                {profile.cardioPref === 'high'
+                  ? '+ a moderate cardio session if you have it'
+                  : profile.cardioPref === 'moderate'
+                  ? 'optional 20–30 min low-intensity cardio'
+                  : 'easy walk; let the body recover'}
+              </div>
+            </div>
+            <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+              <div className="text-[11px] uppercase tracking-wider text-zinc-400">
+                Nutrition
+              </div>
+              <div className="mt-1 text-sm font-semibold text-zinc-100">
+                Protein at every meal
+              </div>
+              <div className="mt-0.5 text-xs text-zinc-400">
+                {profile.mealTimes && profile.mealTimes.length > 0
+                  ? `Hit your meal times: ${profile.mealTimes.join(', ')}`
+                  : 'Spread protein evenly across 4–5 meals'}
+              </div>
+            </div>
+            <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+              <div className="text-[11px] uppercase tracking-wider text-zinc-400">
+                Recovery
+              </div>
+              <div className="mt-1 text-sm font-semibold text-zinc-100">
+                Sleep · hydrate · log
+              </div>
+              <div className="mt-0.5 text-xs text-zinc-400">
+                Log today's weight + waist · 7+ hrs sleep · 80–100 oz water
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {coachNudgeDue && (
         <div className="rounded-2xl border-2 border-accent/40 bg-accent/10 p-4 shadow-glow">
