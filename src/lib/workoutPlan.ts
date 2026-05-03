@@ -5,7 +5,10 @@ import type {
   WeeklyPlan,
   WorkoutDay,
   WorkoutSession,
+  WorkoutVolumePreference,
 } from '../types';
+import { detectWeakPoints } from './weakPoints';
+import { store } from './storage';
 
 // Round to nearest 5 lbs (typical micro plate availability)
 const round5 = (n: number) => Math.max(0, Math.round(n / 5) * 5);
@@ -18,6 +21,141 @@ interface BuildArgs {
   profile: Profile;
   weekNumber: number;
   phase: TrainingPhase;
+}
+
+// ─── Volume filtering + rotation ───────────────────────────────────────────
+//
+// The day functions return their FULL accessory list. applyVolume() trims
+// + rotates that list per the user's workoutVolumePreference, so each
+// week shows a different slice of the pool — weak-point coverage stays
+// intact over the cycle without any single day being too long.
+
+/** Default preference per goal when the user hasn't set one. */
+export function defaultVolumeFor(profile: Profile): WorkoutVolumePreference {
+  if (profile.workoutVolumePreference) return profile.workoutVolumePreference;
+  if (profile.goal === 'fat_loss') return 'compact';
+  return 'standard';
+}
+
+/** Target total exercises per lift day (including main + secondary). */
+function targetCount(pref: WorkoutVolumePreference): number {
+  if (pref === 'compact') return 6;
+  if (pref === 'standard') return 8;
+  return 9;
+}
+
+/**
+ * Should core-only exercises stay on lift days? Always YES when:
+ *   - profile flags lower_back as a problem area
+ *   - weakPoints engine flags core_bracing or lower_back_pain
+ *
+ * Otherwise — core moves off lift days for compact + standard, and
+ * lives on cardio/rest days (surfaced via the Dashboard's Rest Day Plan
+ * card). Core stays on every lift day for 'high' regardless.
+ */
+function shouldKeepCoreOnLiftDay(profile: Profile, pref: WorkoutVolumePreference): boolean {
+  if (pref === 'high') return true;
+  if (profile.problemAreas.includes('lower_back')) return true;
+  try {
+    const wp = detectWeakPoints(store.getLogs());
+    if (wp.some((w) => w.key === 'core_bracing' || w.key === 'lower_back_pain')) {
+      return true;
+    }
+  } catch {
+    // If anything goes sideways reading logs, fail safely toward keeping
+    // core on lift days — under-recovery costs less than under-bracing.
+    return true;
+  }
+  return false;
+}
+
+function isCoreOnly(p: ExercisePrescription): boolean {
+  const tags = (p.tags ?? []).map((t) => t.toLowerCase());
+  if (!tags.includes('core')) return false;
+  // Combo-tagged movements (e.g., Farmer Carry = grip + core) stay.
+  return !tags.some((t) => ['main', 'accessory', 'glute', 'back', 'grip', 'biceps', 'triceps', 'shoulders'].includes(t));
+}
+
+/**
+ * Pull the "secondary" accessory for a main-lift day — typically the
+ * paused/deficit/pause variant of the main lift. We pin it by name
+ * pattern so each day function doesn't have to add a custom tag.
+ */
+function isSecondaryMovement(p: ExercisePrescription, mainName: string): boolean {
+  const n = p.name.toLowerCase();
+  const m = mainName.toLowerCase();
+  if (m.includes('squat') && /\b(paus(ed|e)|front|tempo)\b.*squat/i.test(p.name)) return true;
+  if (m.includes('bench') && /\b(paus(ed|e)|larsen|spoto|board)\b.*bench/i.test(p.name)) return true;
+  if (m.includes('deadlift') && /\b(deficit|pause|snatch|stiff)\b.*deadlift/i.test(p.name)) return true;
+  void n;
+  return false;
+}
+
+/**
+ * Apply volume preference to a session's prescription list:
+ *   - keep main (always first)
+ *   - keep one secondary movement when present
+ *   - filter core-only when not needed (per shouldKeepCoreOnLiftDay)
+ *   - rotate the remaining accessories by weekNumber so each week
+ *     covers a different slice of the pool
+ *   - truncate to targetCount(pref)
+ *
+ * Pure function — same inputs always give the same output.
+ */
+export function applyVolume(
+  prescriptions: ExercisePrescription[],
+  profile: Profile,
+  weekNumber: number,
+): ExercisePrescription[] {
+  const pref = defaultVolumeFor(profile);
+  const target = targetCount(pref);
+
+  const main = prescriptions.find((p) => (p.tags ?? []).includes('main'));
+  const others = main ? prescriptions.filter((p) => p !== main) : prescriptions;
+
+  // Core-only filter
+  const keepCore = shouldKeepCoreOnLiftDay(profile, pref);
+  const afterCoreFilter = keepCore
+    ? others
+    : others.filter((p) => !isCoreOnly(p));
+
+  // Pull secondary movement to the front (when there's a main lift)
+  let ordered = afterCoreFilter;
+  if (main) {
+    const secondary = afterCoreFilter.find((p) => isSecondaryMovement(p, main.name));
+    if (secondary) {
+      ordered = [secondary, ...afterCoreFilter.filter((p) => p !== secondary)];
+    }
+  }
+
+  // Weekly rotation of the trailing accessories. We keep the first item
+  // (secondary) pinned; the rotation only affects the bench accessories.
+  const pinned = main ? 1 : 0;
+  const rotatable = ordered.slice(pinned);
+  const offset = rotatable.length > 0 ? (Math.max(0, weekNumber - 1)) % rotatable.length : 0;
+  const rotated = [
+    ...rotatable.slice(offset),
+    ...rotatable.slice(0, offset),
+  ];
+  const finalOthers = [...ordered.slice(0, pinned), ...rotated];
+
+  // Truncate
+  const head = main ? [main] : [];
+  const tail = main ? finalOthers : finalOthers;
+  const slots = target - head.length;
+  return [...head, ...tail.slice(0, slots)];
+}
+
+/** Plain-English coach note explaining the volume choice. */
+function volumeCoachNote(profile: Profile): string | null {
+  const pref = defaultVolumeFor(profile);
+  if (pref === 'compact') {
+    return 'Volume reduced to improve recovery and consistency during fat loss. Core work has moved to your cardio / rest days unless lower-back risk pulls it back in.';
+  }
+  if (pref === 'standard') {
+    return 'Standard volume — full coverage with weekly accessory rotation. Bump to High if recovery is consistently strong; drop to Compact if sessions feel rushed.';
+  }
+  return null; // high — leave the day's existing coachNote alone
 }
 
 function squatDay({ profile, weekNumber, phase }: BuildArgs): WorkoutSession {
@@ -182,15 +320,30 @@ function lowerGluteDay({ weekNumber, phase }: BuildArgs): WorkoutSession {
 
 export function buildWeeklyPlan(profile: Profile, weekNumber = 1, phase: TrainingPhase = 'hypertrophy'): WeeklyPlan {
   const args: BuildArgs = { profile, weekNumber, phase };
-  const sessions: WorkoutSession[] = [
+  const rawSessions: WorkoutSession[] = [
     squatDay(args),
     benchDay(args),
     deadliftDay(args),
     upperAccessoryDay(args),
   ];
   if (profile.trainingDaysPerWeek >= 5) {
-    sessions.push(lowerGluteDay(args));
+    rawSessions.push(lowerGluteDay(args));
   }
+
+  // Apply volume preference + weekly rotation per session. The day
+  // functions return the FULL pool; this is where it gets trimmed.
+  const volumeNote = volumeCoachNote(profile);
+  const sessions: WorkoutSession[] = rawSessions.map((s) => {
+    const trimmed = applyVolume(s.prescriptions, profile, weekNumber);
+    return {
+      ...s,
+      prescriptions: trimmed,
+      coachNote: volumeNote
+        ? `${s.coachNote ?? ''}${s.coachNote ? ' ' : ''}${volumeNote}`
+        : s.coachNote,
+    };
+  });
+
   return { weekNumber, phase, sessions };
 }
 

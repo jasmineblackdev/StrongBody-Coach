@@ -8,6 +8,17 @@ export type LifestyleActivity =
   | 'moderately_active'
   | 'very_active';
 export type FatLossMode = 'conservative' | 'standard' | 'performance';
+
+/**
+ * How much volume the user wants per lift day. Smaller days = better
+ * recovery + consistency on a fat-loss block; larger days = more
+ * stimulus when recovery + adherence are both high.
+ *
+ *   compact   ≈ 5–6 exercises  (default for fat_loss)
+ *   standard  ≈ 7–8 exercises
+ *   high      ≈ 8–9 exercises  (legacy / hypertrophy block)
+ */
+export type WorkoutVolumePreference = 'compact' | 'standard' | 'high';
 export type WorkoutDay =
   | 'squat'
   | 'bench'
@@ -92,6 +103,12 @@ export interface Profile {
    * always shows; this just streamlines what's visible mid-session.
    */
   gymMode?: boolean;
+  /**
+   * Workout volume preference. Drives how many exercises buildWeeklyPlan
+   * keeps per lift day and whether core work stays on lift days. Defaults
+   * to 'compact' when goal === 'fat_loss', otherwise 'standard'.
+   */
+  workoutVolumePreference?: WorkoutVolumePreference;
   /**
    * Signed kcal offset applied AFTER the macro engine's own goal/trend
    * adjustments. The Coach Brain writes here when the user accepts a

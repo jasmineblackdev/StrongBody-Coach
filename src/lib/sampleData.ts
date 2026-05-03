@@ -27,6 +27,9 @@ export const sampleProfile: Profile = {
   // Meal + workout schedule drives time-aware macro distribution.
   mealTimes: ['07:30', '10:30', '13:00', '15:30', '20:00'],
   workoutTime: '18:00',
+  // Compact lift days (5–6 exercises) — better recovery + consistency
+  // for fat-loss block. Core work moves to cardio/rest days.
+  workoutVolumePreference: 'compact',
   createdAt: new Date().toISOString(),
 };
 

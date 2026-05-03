@@ -18,6 +18,7 @@ import type {
   LifestyleActivity,
   Profile,
   ProblemArea,
+  WorkoutVolumePreference,
 } from '../types';
 
 const PROBLEM_AREAS: { key: ProblemArea; label: string }[] = [
@@ -55,6 +56,12 @@ const FAT_LOSS_MODES: { key: FatLossMode; label: string; sub: string }[] = [
   { key: 'conservative', label: 'Conservative', sub: '~0.6 lb/wk · protect strength' },
   { key: 'standard', label: 'Standard', sub: '~1 lb/wk · the sweet spot' },
   { key: 'performance', label: 'Performance', sub: '~1.2 lb/wk · for users with significant fat to lose' },
+];
+
+const VOLUME_PREFS: { key: WorkoutVolumePreference; label: string; sub: string }[] = [
+  { key: 'compact', label: 'Compact', sub: '5–6 exercises · best recovery + consistency' },
+  { key: 'standard', label: 'Standard', sub: '7–8 exercises · full coverage with rotation' },
+  { key: 'high', label: 'High volume', sub: '8–9 exercises · only when recovery is strong' },
 ];
 
 export default function ProfilePage() {
@@ -286,6 +293,34 @@ export default function ProfilePage() {
               </div>
             </div>
           )}
+
+          <div className="mt-4">
+            <span className="label">Workout volume per lift day</span>
+            <div className="flex flex-wrap gap-2">
+              {VOLUME_PREFS.map((v) => {
+                const defaultPref =
+                  p.workoutVolumePreference ??
+                  (p.goal === 'fat_loss' ? 'compact' : 'standard');
+                const active = defaultPref === v.key;
+                return (
+                  <button
+                    key={v.key}
+                    onClick={() => update('workoutVolumePreference', v.key)}
+                    className={`btn flex-col items-start text-left ${active ? 'btn-primary' : 'btn-outline'}`}
+                    title={v.sub}
+                  >
+                    <span>{v.label}</span>
+                    <span className="text-[10px] font-normal opacity-80">{v.sub}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[11px] text-zinc-500">
+              Compact moves core work to your cardio / rest days (Pallof, Dead
+              Bug, Plank). Lower-back risk or bracing weakness pulls core back
+              onto lift days automatically.
+            </p>
+          </div>
 
           <label className="mt-4 flex items-center gap-2 text-sm text-zinc-300">
             <input

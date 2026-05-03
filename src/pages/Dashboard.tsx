@@ -205,14 +205,17 @@ export default function Dashboard() {
       {/* Rest-day plan card — only when no workout today. Concrete steps /
           cardio / recovery / meal-timing reminder so the rest day still
           has structure. */}
-      {!todays && (
+      {!todays && (() => {
+        const volumePref = profile.workoutVolumePreference ?? (profile.goal === 'fat_loss' ? 'compact' : 'standard');
+        const showCoreCircuit = volumePref !== 'high';
+        return (
         <Card>
           <SectionHeader
             title="Rest day plan"
             subtitle="Today is a recovery day — don't waste it"
             action={<Pill tone="accent">recovery</Pill>}
           />
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className={`grid gap-3 ${showCoreCircuit ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
             <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
               <div className="text-[11px] uppercase tracking-wider text-zinc-400">
                 Movement
@@ -228,6 +231,21 @@ export default function Dashboard() {
                   : 'easy walk; let the body recover'}
               </div>
             </div>
+            {showCoreCircuit && (
+              <div className="rounded-xl border border-accent/30 bg-accent/5 p-3">
+                <div className="text-[11px] uppercase tracking-wider text-rose-glow">
+                  Core circuit
+                </div>
+                <div className="mt-1 text-sm font-semibold text-zinc-100">
+                  3 rounds, 60s rest
+                </div>
+                <ul className="mt-0.5 space-y-0.5 text-xs text-zinc-300">
+                  <li>• Pallof Press · 10/side</li>
+                  <li>• Dead Bug · 8/side</li>
+                  <li>• Plank · 30s</li>
+                </ul>
+              </div>
+            )}
             <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
               <div className="text-[11px] uppercase tracking-wider text-zinc-400">
                 Nutrition
@@ -254,7 +272,8 @@ export default function Dashboard() {
             </div>
           </div>
         </Card>
-      )}
+        );
+      })()}
 
       {coachNudgeDue && (
         <div className="rounded-2xl border-2 border-accent/40 bg-accent/10 p-4 shadow-glow">
