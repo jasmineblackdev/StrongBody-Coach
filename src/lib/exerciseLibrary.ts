@@ -82,6 +82,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Exhale only after lockout. Take a fresh brace before each rep — never reuse air across reps.',
     ],
     difficultyLevel: 'intermediate',
+    // Squat University — "How to Perform A Back Squat" (Aaron Horschig)
+    youtubeId: '7v_V6xiA_AA',
   },
 
   {
@@ -152,6 +154,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Improve front-rack mobility (lat / lat-stretch / wrist circles) instead of grinding. Strap the bar if mobility is the limit.',
     ],
     difficultyLevel: 'intermediate',
+    // Jeff Nippard — "HOW TO FRONT SQUAT: Build Bigger Quads & A Stronger Squat"
+    youtubeId: 'v-mQm_droHg',
   },
 
   {
@@ -191,6 +195,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Pull the bar apart with your hands and drive shoulder blades into the bench. Locked-down upper back = power transfer.',
     ],
     difficultyLevel: 'intermediate',
+    // Jeff Nippard — "How To Get A Huge Bench Press with PERFECT Technique"
+    youtubeId: 'vcBig73ojpE',
   },
 
   {
@@ -231,6 +237,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Keep lats engaged — cue "armpits down, oranges in your armpits squeezed." Bar should drag up shins, lightly.',
     ],
     difficultyLevel: 'advanced',
+    // Jeff Nippard — "Build A Bigger Deadlift With Perfect Technique (Conventional Form)"
+    youtubeId: 'VL5Ab0T07e4',
   },
 
   {
@@ -267,6 +275,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Finish standing tall — ribs over hips, glutes tight, no leaning back.',
     ],
     difficultyLevel: 'beginner',
+    // Squat University — "FIX Your RDL Form! (Ultimate Romanian Deadlift Tutorial)"
+    youtubeId: '5bJEigM5iVg',
   },
 
   {
@@ -305,6 +315,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Move feet closer in toward butt. If knees push past toes, you\'re too close — back off slightly.',
     ],
     difficultyLevel: 'beginner',
+    // Jeff Nippard — "How To Build Great Glutes with Perfect Hip Thrust Technique (Fix Mistakes!)"
+    youtubeId: 'xDmFkJxPzeM',
   },
 
   {
@@ -343,6 +355,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Take 80% of your weight on the front leg. Rear is just balance support.',
     ],
     difficultyLevel: 'intermediate',
+    // ATHLEAN-X — "Stop F*cking Up Bulgarian Split Squats (PROPER FORM!)"
+    youtubeId: 'hiLF_pF3EJM',
   },
 
   {
