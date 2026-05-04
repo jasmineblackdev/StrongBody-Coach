@@ -767,6 +767,252 @@ const LIBRARY: ExerciseEntry[] = [
     // ATHLEAN-X — "The Ultimate Ab Rollout Progression (BEGINNER TO ADVANCED!)"
     youtubeId: '5I3LgiumTJM',
   },
+
+  {
+    name: 'Deficit Deadlift',
+    aliases: ['Deficit Deadlift (1")', 'Deficit Deadlift 1in', '1in Deficit Deadlift'],
+    primaryMuscles: ['Hamstrings', 'Glutes'],
+    secondaryMuscles: ['Spinal erectors', 'Lats', 'Traps', 'Core'],
+    feel:
+      'Hamstrings and glutes loading harder than a regular deadlift right at the floor — that extra inch is doing the work. Lats locked in pulling the bar tight to your shins. Brace holding everything stacked.',
+    avoidFeel:
+      "Lower back rounding to reach the bar, knees collapsing in, bar drifting away from your shins. If you can't keep a flat back at the bottom of the deficit, drop the deficit height — don't compromise the spine.",
+    setupCues: [
+      'Stand on a 1–2" plate or platform. Start small — even 1 inch is meaningful.',
+      'Bar over mid-foot. Hips slightly lower than a regular deadlift.',
+      'Big breath, brace 360°, lats engaged before the bar leaves the floor.',
+      'Hands just outside the legs, neutral grip or hook grip preferred at heavier loads.',
+    ],
+    formSteps: [
+      'Hinge down with hips back, chest tall, shoulders slightly in front of the bar.',
+      'Drop hips slightly to absorb the deeper start position. Maintain flat back.',
+      'Press the floor away with the legs as the bar travels straight up your shins.',
+      'Lock out hips and knees together. Glutes squeezed at the top — no hyperextension.',
+      'Lower with control along the same path. Reset air and brace before the next rep.',
+    ],
+    commonMistakes: [
+      'Lower back rounding to reach the bar from the deficit.',
+      "Going too tall on the deficit before you've earned the depth.",
+      'Bar drifting away from the shins on the way up.',
+      'Hips shooting up first — turning the lift into a stiff-leg deadlift.',
+      'Bouncing reps off the platform.',
+    ],
+    corrections: [
+      'Drop the deficit height. Even 1" is enough to train the floor pull. Earn taller deficits with mobility and bracing.',
+      'Start at 1". Add 0.5" only when you can pull 5 clean reps with a flat back.',
+      'Cue "drag the bar up your shins." Engage lats before the pull starts.',
+      'Push the floor away with your legs — bar and shoulders rise together.',
+      'Pause 1 second on the floor between reps. Reset air, reset brace, then pull.',
+    ],
+    difficultyLevel: 'advanced',
+    // Renaissance Periodization — "Deficit Deadlift"
+    youtubeId: 'X-uKkAukJVA',
+  },
+
+  {
+    name: 'Good Morning',
+    aliases: ['Good Mornings', 'Barbell Good Morning'],
+    primaryMuscles: ['Hamstrings', 'Glutes'],
+    secondaryMuscles: ['Spinal erectors', 'Core'],
+    feel:
+      'Deep stretch through the hamstrings as you hinge — like an RDL with the bar on your back. Glutes firing hard to bring you back up. Spinal erectors holding a rigid, neutral spine the whole time.',
+    avoidFeel:
+      "Lower back rounding, sharp lumbar pinching, knees buckling under the load. The bar should never feel like it's compressing your spine — if it does, the load is too heavy or your brace failed.",
+    setupCues: [
+      'Bar on upper traps like a high-bar squat. Tight upper back, hands close.',
+      'Stance shoulder-width, soft bend in the knees — not locked, not bent like a squat.',
+      'Big breath, brace hard, ribs stacked over hips before you hinge.',
+      'Start light. The good morning is humbling — most people overload it.',
+    ],
+    formSteps: [
+      'Push your hips straight back. Keep that soft knee bend frozen.',
+      'Hinge until your torso is roughly parallel to the floor — or where flexibility allows without losing flat back.',
+      'Hamstrings should feel like they are the limit, not your low back.',
+      'Drive hips forward to stand back up. Squeeze glutes at the top.',
+      'Reset air and brace between reps. No bouncing through the bottom.',
+    ],
+    commonMistakes: [
+      'Bending the knees mid-rep — turning it into a squat.',
+      'Lower back rounding at the bottom.',
+      'Going too heavy too soon.',
+      'Hips and shoulders not moving together on the way up.',
+      'Bar slipping up toward the neck.',
+    ],
+    corrections: [
+      'Lock the knee angle at the start. Hinge from the hips only — knees stay where they started.',
+      'Stop the descent the moment you feel your low back take over from your hamstrings. Build range with mobility work.',
+      'Treat it like a technique lift. 3×8–10 in the 30–50% of squat 1RM range is plenty.',
+      'Cue "chest and hips rise together." Keep the bar over mid-foot the whole rep.',
+      'Squeeze the upper back hard — pull the bar into your traps. Tight grip helps.',
+    ],
+    difficultyLevel: 'intermediate',
+    // Squat University — "How To Perform Good Mornings (STEP BY STEP TUTORIAL)"
+    youtubeId: 'qxNuAQknYQI',
+  },
+
+  {
+    name: 'Barbell Row',
+    aliases: ['Bent-Over Barbell Row', 'Bent Over Row', 'Bent-Over Row'],
+    primaryMuscles: ['Lats', 'Mid-back'],
+    secondaryMuscles: ['Rhomboids', 'Rear delts', 'Biceps', 'Spinal erectors'],
+    feel:
+      'Lats and mid-back pulling the bar to your stomach. Strong squeeze between the shoulder blades at the top. Hips and core locked in like a hinge — torso angle holds steady through the whole set.',
+    avoidFeel:
+      "Lower back rounding, jerking with the hips to swing the weight up, biceps and forearms taking over instead of back. If your low back is the limiting factor, the load is too heavy.",
+    setupCues: [
+      'Hinge into ~45° torso angle. Knees softly bent, hips back.',
+      'Bar over mid-foot, hands just outside the legs (overhand grip).',
+      'Big breath, brace 360°. Ribs stacked over hips, neutral neck.',
+      'Lats engaged before the row — pull your shoulders down and back.',
+    ],
+    formSteps: [
+      'Pull the bar to your lower chest / upper stomach with your elbows leading.',
+      'Squeeze shoulder blades together at the top. Pause 1 second.',
+      'Lower with control along the same path — don\'t let the bar swing forward.',
+      'Keep the torso angle frozen. If the torso rises, the load is too heavy.',
+      'Reset air and brace between reps if needed.',
+    ],
+    commonMistakes: [
+      'Hip-swinging / kipping the bar up.',
+      'Bar pulled too high (toward the chin) — turning it into an upright row.',
+      'Lower back rounding under load.',
+      'Elbows flaring out wide instead of tracking back.',
+      'Shrugging up with the traps instead of squeezing the shoulder blades.',
+    ],
+    corrections: [
+      'Lighten the load. Cue "torso doesn\'t move." Pause 1 second at the top of every rep to kill momentum.',
+      'Aim the bar at your belly button — not your chest. Drive elbows back, not up.',
+      'Reset brace before every rep. If the back rounds at any point in the set, end the set.',
+      'Cue "elbows toward the hips" — lats lead the pull, not the rear delts.',
+      'Pull shoulder blades back and down before the row, not up. Traps stay quiet.',
+    ],
+    difficultyLevel: 'intermediate',
+    // ATHLEAN-X — "How to do Barbell Rows PROPERLY for a Big Back (AVOID MISTAKES!)"
+    youtubeId: 'T3N-TO4reLQ',
+  },
+
+  {
+    name: 'Overhead Press',
+    aliases: ['OHP', 'Standing Press', 'Military Press', 'Barbell Overhead Press', 'Strict Press'],
+    primaryMuscles: ['Front delts'],
+    secondaryMuscles: ['Triceps', 'Upper chest', 'Traps', 'Core'],
+    feel:
+      'Front delts and triceps pressing the bar straight overhead. Glutes and core locked in like a plank — no leaning back. Shoulders strong and stable through the lockout.',
+    avoidFeel:
+      "Lower back arching to compensate, shoulders shrugging up to avoid the press, sharp pain in the front of the shoulder. If the lift is happening from your low back, the load is too heavy.",
+    setupCues: [
+      'Bar resting on the front delts, elbows slightly in front of the bar.',
+      'Hands just outside shoulder-width. Wrists stacked over elbows.',
+      'Stance shoulder-width. Glutes and quads tight — full-body brace.',
+      'Big breath, brace 360°, ribs DOWN — don\'t let the rib cage flare.',
+    ],
+    formSteps: [
+      'Tuck the chin slightly so the bar can travel straight up past the face.',
+      'Press the bar in a vertical line. As the bar passes your forehead, push your head through the window.',
+      'Lock out overhead with the bar stacked over mid-foot. Elbows fully extended, traps engaged at the top.',
+      'Lower the bar back to the front rack with control — same straight path.',
+      'Reset brace and air before the next rep.',
+    ],
+    commonMistakes: [
+      'Leaning back excessively — turning it into an incline bench.',
+      'Bar pressed forward instead of straight up.',
+      'Ribs flaring out — losing the brace.',
+      'Soft glutes / soft core — energy leak.',
+      'Failing to push the head through at lockout.',
+    ],
+    corrections: [
+      'Lighten the load. Cue "ribs down, glutes tight." A small backward lean is normal; a big arch is not.',
+      'Tuck the chin to clear the bar path. Cue "bar over mid-foot at lockout."',
+      'Exhale partially before pressing. Maintain 360° brace through the full rep.',
+      'Squeeze glutes hard before the press starts. Treat it like a standing plank.',
+      'After the bar clears the forehead, actively shrug the traps and push the head forward under the bar.',
+    ],
+    difficultyLevel: 'intermediate',
+    // Jeff Nippard — "Build Bigger Shoulders With Perfect Training Technique (The Overhead Press)"
+    youtubeId: '_RlRDWO2jfg',
+  },
+
+  {
+    name: 'Pull-Up',
+    aliases: ['Pull Up', 'Pullup', 'Pull-Ups', 'Lat Pulldown', 'Pull-Up / Lat Pulldown'],
+    primaryMuscles: ['Lats'],
+    secondaryMuscles: ['Mid-back', 'Rear delts', 'Biceps', 'Core'],
+    feel:
+      'Lats pulling the elbows down to your sides — the prime mover. Mid-back squeezing at the top. Core engaged keeping the body straight, not swinging.',
+    avoidFeel:
+      "Shoulder pinching at the top, neck cranking forward to clear the bar, low back arching to swing yourself up. If the biceps and forearms burn out before the lats, the lats aren't doing their job.",
+    setupCues: [
+      'Grip just outside shoulder-width, overhand. Squeeze the bar like you\'re crushing it.',
+      'Hang from the bar with shoulders packed down — not slumped up by the ears.',
+      'Brace the core and squeeze the glutes. Body in a slight hollow position.',
+      'Legs in front of the body, toes pointed down. No swinging.',
+    ],
+    formSteps: [
+      'Initiate the pull by driving the elbows DOWN toward your back pockets.',
+      'Pull until your chin clears the bar — chest reaching up to meet it.',
+      'Squeeze shoulder blades together at the top. Pause 1 second.',
+      'Lower with control to a full hang — arms straight but lats still engaged.',
+      'Don\'t lose tension at the bottom. Stay packed, don\'t shrug up.',
+    ],
+    commonMistakes: [
+      'Kipping / swinging the body to clear the bar.',
+      'Pulling with the biceps instead of the lats.',
+      'Not reaching full ROM at the bottom.',
+      'Shoulders shrugging up to the ears at the bottom.',
+      'Cranking the neck forward to clear the bar.',
+    ],
+    corrections: [
+      'Use a band or assisted pulldown to lighten the load. Pause 1 second at the top of every rep to kill momentum.',
+      'Cue "elbows down to the floor." Engage lats first — biceps just go along for the ride.',
+      'Lower until arms are fully straight — but keep shoulders packed down, not relaxed.',
+      'Pull shoulder blades down before initiating the pull. Cue "long neck."',
+      'Lift the chest to the bar instead of dropping the chin. Keep neutral neck.',
+    ],
+    difficultyLevel: 'intermediate',
+    // ATHLEAN-X — "The Official Pull-Up Checklist (AVOID MISTAKES!)"
+    youtubeId: 'sIvJTfGxdFo',
+  },
+
+  {
+    name: 'DB Lateral Raise',
+    aliases: ['Lateral Raise', 'Dumbbell Lateral Raise', 'Side Lateral Raise', 'Side Raise'],
+    primaryMuscles: ['Lateral delts'],
+    secondaryMuscles: ['Front delts', 'Traps'],
+    feel:
+      'Lateral delts (the side caps of the shoulder) doing all the work — burning hard by the last few reps. Light weight, strict form, slow tempo. The pump should be in the side delt only.',
+    avoidFeel:
+      "Traps shrugging up to lift the dumbbells, momentum from the legs/back, sharp pain in the front of the shoulder, wrists collapsing. If the traps take over, the side delts are off the hook.",
+    setupCues: [
+      'Stand tall with a soft knee bend. Slight forward lean from the hips — not vertical.',
+      'Dumbbells at your sides, palms facing inward. Light weight — leave ego out.',
+      'Soft bend in the elbows that stays locked the whole rep — not a curl.',
+      'Brace the core. Glutes tight to prevent body english.',
+    ],
+    formSteps: [
+      'Lead with the elbows — raise the elbows out and slightly forward, NOT straight to the side.',
+      'Stop when the upper arm is roughly parallel to the floor. Elbow slightly higher than the wrist.',
+      'Pause 1 second at the top, feel the side delt contraction.',
+      'Lower with a controlled tempo (2–3 seconds down). No flopping the weight down.',
+      'Keep the body still — only the arms move.',
+    ],
+    commonMistakes: [
+      'Going too heavy and using momentum to swing the weights up.',
+      'Wrists higher than the elbows at the top — turning it into a front raise.',
+      'Shrugging traps up to assist the lift.',
+      'Locking out the elbows — overloading the elbow joint.',
+      'Standing perfectly vertical — limits side delt range.',
+    ],
+    corrections: [
+      'Lighten the dumbbells. Cue "if you have to swing, drop the weight." 8–15 reps with strict form.',
+      'Cue "pour out a pitcher" — slight internal rotation at the top, elbow stays higher than wrist.',
+      'Cue "keep the shoulders DOWN, away from the ears" the whole set. Pre-engage lats.',
+      'Keep a soft 10–15° elbow bend frozen the whole rep. Locked-out arms are unsafe under load.',
+      'Slight forward lean (5–10°) from the hips improves the side delt line of pull.',
+    ],
+    difficultyLevel: 'beginner',
+    // Jeff Nippard — "The Lateral Raise Is The ONLY Must-Do Exercise (MY RESPONSE)"
+    youtubeId: 'IdNOahFD450',
+  },
 ];
 
 // ─── Coaching helpers ────────────────────────────────────────────────────────
