@@ -47,7 +47,7 @@ export interface ExerciseEntry {
 const LIBRARY: ExerciseEntry[] = [
   {
     name: 'Back Squat',
-    aliases: ['Barbell Back Squat'],
+    aliases: ['Barbell Back Squat', 'Tempo Squat', 'Tempo Back Squat'],
     primaryMuscles: ['Quadriceps'],
     secondaryMuscles: ['Glutes', 'Hamstrings', 'Spinal erectors', 'Core'],
     feel:
@@ -394,6 +394,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Cue "hips facing forward" the entire set. If they shift, restart.',
     ],
     difficultyLevel: 'beginner',
+    // Squat University — "Do THESE For Core Stability!" (covers Pallof Press)
+    youtubeId: 'nEYBvvKeTHE',
   },
 
   {
@@ -429,6 +431,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Every inch is controlled. If your foot drops fast, it\'s using gravity, not your core.',
     ],
     difficultyLevel: 'beginner',
+    // Squat University — "Do THESE For Core Stability!" (covers dead bug variations)
+    youtubeId: 'nEYBvvKeTHE',
   },
 
   {
@@ -467,6 +471,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Strap only the heaviest set per session. Carries are a grip lift first.',
     ],
     difficultyLevel: 'beginner',
+    // Squat University — #AskSquatU "Side Bends or Suitcase Carry?" (Ep. 47)
+    youtubeId: '7D96dK6oaP8',
   },
 
   {
@@ -503,6 +509,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Drop down before you fully fail. Failing on a hang means scraped palms and a tweaked shoulder.',
     ],
     difficultyLevel: 'beginner',
+    // ATHLEAN-X — "Do This EVERY Day for Better Posture (GUARANTEED!)" (dead-hang based)
+    youtubeId: '3aRpAO6bfvA',
   },
 
   {
@@ -617,6 +625,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Move the ball closer to a wall or bench so the hands can stabilize. Build to free-form over 4 weeks.',
     ],
     difficultyLevel: 'intermediate',
+    // ATHLEAN-X — "Plank Progression - From Rookie to RIPPED ABS" (covers ball plank progression)
+    youtubeId: 'xVrALzPc7dM',
   },
 
   {
@@ -1332,13 +1342,14 @@ function normalize(s: string): string {
   return s
     .toLowerCase()
     .replace(/\([^)]*\)/g, '') // strip parenthetical hints like "(2s)"
+    .replace(/\b\d+-\d+-\d+\b/g, '') // strip tempo cadence like "3-1-1" / "2-0-1"
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
 function stripPrefixes(s: string): string {
-  return s.replace(/^(barbell|dumbbell|machine|cable|bar)\s+/i, '').trim();
+  return s.replace(/^(barbell|dumbbell|machine|cable|bar|tempo)\s+/i, '').trim();
 }
 
 /**
