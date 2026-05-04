@@ -574,6 +574,8 @@ const LIBRARY: ExerciseEntry[] = [
       'Drop weight 15-20% from your bench number. Close-grip is naturally lighter — chasing matched weight kills the lift.',
     ],
     difficultyLevel: 'intermediate',
+    // Renaissance Periodization — "Close Grip Bench Pressing For Maximum Growth | Targeting The Muscle"
+    youtubeId: 'Cv5nS1AH_jE',
   },
 
   // ─── Stability ball variants ────────────────────────────────────────────
@@ -1012,6 +1014,292 @@ const LIBRARY: ExerciseEntry[] = [
     difficultyLevel: 'beginner',
     // Jeff Nippard — "The Lateral Raise Is The ONLY Must-Do Exercise (MY RESPONSE)"
     youtubeId: 'IdNOahFD450',
+  },
+
+  {
+    name: 'DB Incline Press',
+    aliases: ['Incline Dumbbell Press', 'Incline DB Press', 'DB Incline Bench Press'],
+    primaryMuscles: ['Upper chest'],
+    secondaryMuscles: ['Front delts', 'Triceps'],
+    feel:
+      'Upper chest stretch at the bottom, hard contraction at the top. Front delts assisting but not dominating. Each side has to do its own work — no barbell to compensate.',
+    avoidFeel:
+      "Front shoulder pinching at the bottom, wrists collapsing back, the press happening from the front delt instead of the chest. If your shoulders burn before your chest, the bench is too steep.",
+    setupCues: [
+      'Set bench to 30–45°. Steeper = more front delt, less chest.',
+      'Sit back, drive shoulder blades down and into the bench. Slight arch.',
+      'Dumbbells start at the lower chest with elbows tucked ~45° from the torso.',
+      'Wrists stacked over elbows, knuckles pointed at the ceiling.',
+    ],
+    formSteps: [
+      'Big breath, brace 360°. Press the dumbbells up and slightly inward toward each other.',
+      'Stop just short of the dumbbells touching at the top. No hyperextended elbows.',
+      'Squeeze the upper chest hard at the top.',
+      'Lower with control until the dumbbells reach the upper chest — full stretch.',
+      'Reset air and brace before the next rep.',
+    ],
+    commonMistakes: [
+      'Bench too steep (60°+) — turns it into an overhead press.',
+      'Elbows flared out at 90° — shoulder strain.',
+      'Pressing the dumbbells away from each other at the top.',
+      'Bouncing the dumbbells off the chest.',
+      'Asymmetric press — one side leading the other.',
+    ],
+    corrections: [
+      'Use 30–45°. If you want more upper chest, tweak grip and tempo first; don\'t go steeper than 45°.',
+      'Tuck elbows to ~45°. Cue "show me the dumbbells, don\'t hide them."',
+      'Cue "press the dumbbells together, not apart" — even an inch of inward squeeze recruits the chest more.',
+      'Pause 1 second at the bottom of every rep. No bounce.',
+      'Press both sides simultaneously. If one side lags, drop the weight until both move together.',
+    ],
+    difficultyLevel: 'intermediate',
+    // Renaissance Periodization — "Incline Dumbbell Press BETTER | Targeting The Muscle Series"
+    youtubeId: '0f6-uCUKqgA',
+  },
+
+  {
+    name: 'Chest-Supported Row',
+    aliases: ['Chest Supported Row', 'Chest-Supported T-Bar Row', 'Incline DB Row'],
+    primaryMuscles: ['Mid-back', 'Lats'],
+    secondaryMuscles: ['Rhomboids', 'Rear delts', 'Biceps'],
+    feel:
+      'Pure mid-back and lat contraction. No lower back, no hip swing — the bench takes the spine out of the equation. The squeeze between shoulder blades at the top is the entire point.',
+    avoidFeel:
+      "Chest peeling off the bench (loss of support), traps shrugging up, biceps and forearms taking over the row. If you have to lift your chest off the bench to finish the rep, the load is too heavy.",
+    setupCues: [
+      'Set bench to ~30–45° incline. Lie face-down with chest fully supported.',
+      'Feet planted firmly. Body braced from head to feet.',
+      'Dumbbells (or bar / T-bar handle) hanging straight down from your shoulders.',
+      'Pre-engage lats — pull shoulders down and back before initiating the row.',
+    ],
+    formSteps: [
+      'Row by driving the elbows up and back — toward the back pockets.',
+      'Pull until upper arms are roughly parallel to the floor. Squeeze shoulder blades together at the top.',
+      'Pause 1 second at the top. Feel the mid-back contraction.',
+      'Lower with control to a full stretch — arms straight but lats still engaged.',
+      'Keep the chest glued to the bench through the full set.',
+    ],
+    commonMistakes: [
+      'Lifting the chest off the bench to add range.',
+      'Shrugging the traps up to assist the pull.',
+      'Pulling with biceps instead of mid-back.',
+      'Going too heavy — turning a strict row into a body-english row.',
+      'Insufficient range of motion at the bottom.',
+    ],
+    corrections: [
+      "Cue \"chest stays glued to the bench.\" If you can't keep contact, lighten the load.",
+      'Pull shoulder blades back and DOWN before the row. Cue "long neck."',
+      'Cue "elbows lead, hands follow." Drive the elbows up — biceps just go along for the ride.',
+      'Lighten the load until you can hit a 1-second pause at the top of every rep.',
+      'Lower to full lat stretch. Arms fully straight but shoulders still packed down.',
+    ],
+    difficultyLevel: 'beginner',
+    // Jeff Nippard — "A Better Way To Do Rows"
+    youtubeId: 'fgSyNdEsqlM',
+  },
+
+  {
+    name: 'Face Pulls',
+    aliases: ['Face Pull', 'Cable Face Pull', 'Rope Face Pull'],
+    primaryMuscles: ['Rear delts'],
+    secondaryMuscles: ['Mid-traps', 'Rhomboids', 'Rotator cuff'],
+    feel:
+      'Rear delts and mid-traps pulling the rope toward your face. Rotator cuffs externally rotating the upper arms. A healthy "shoulder hygiene" feel — light, controlled, high-rep.',
+    avoidFeel:
+      "Lower back arching, traps shrugging up to the ears, momentum jerking the cable. If the front of your shoulder pinches, you've gone too heavy or rotated too aggressively.",
+    setupCues: [
+      'Cable at upper-chest / face height. Rope attachment, hands at the ends of the rope.',
+      'Stand with a slight forward lean — staggered or square stance is fine.',
+      'Light weight. Face pulls are a high-rep accessory, not a strength lift.',
+      'Brace core, glutes tight. No body english.',
+    ],
+    formSteps: [
+      'Pull the rope toward your face — separating the hands as you pull.',
+      'Drive elbows HIGH (above shoulder height) and OUT to the sides.',
+      'Externally rotate at the top — knuckles pointed back, thumbs back behind your ears.',
+      'Pause 1 second at the top, feel the rear delt + rotator cuff squeeze.',
+      'Return with control. Don\'t let the stack drop — earn the negative.',
+    ],
+    commonMistakes: [
+      'Going too heavy — turning it into a low row.',
+      'Elbows dropping below shoulders — losing the rear delt line of pull.',
+      'Just rowing instead of rotating at the top.',
+      'Using the lower back to throw the weight.',
+      'Shrugging traps up to the ears.',
+    ],
+    corrections: [
+      'Lighten the load. Face pulls in the 12–20 rep range are the sweet spot.',
+      'Cue "elbows higher than wrists at the top." Drive elbows up and out, not back.',
+      'Add the external rotation — finish with thumbs pointing behind your ears.',
+      'Brace core, glutes squeezed. The cable should not move you backward.',
+      'Cue "shoulders DOWN, away from ears" the entire set.',
+    ],
+    difficultyLevel: 'beginner',
+    // ATHLEAN-X — "STOP Doing Face Pulls Like This! (I'M BEGGING YOU)"
+    youtubeId: '8686PLZB_1Q',
+  },
+
+  {
+    name: 'Walking Lunge',
+    aliases: ['Walking Lunges', 'DB Walking Lunge', 'Dumbbell Walking Lunge'],
+    primaryMuscles: ['Quadriceps', 'Glutes'],
+    secondaryMuscles: ['Hamstrings', 'Adductors', 'Core'],
+    feel:
+      'Front-leg quad and glute loading hard each step. Glutes firing on the push-off. Core fighting to keep balance. By rep 8 each leg, the legs feel cooked.',
+    avoidFeel:
+      "Front knee caving inward, knee shooting forward over the toes, lower back arching from heavy dumbbells. If your balance is gone, drop the weight before form goes.",
+    setupCues: [
+      'Dumbbells at your sides (or none for bodyweight). Stand tall.',
+      'Brace core, ribs over hips, eyes forward.',
+      'Pick a long, straight path — at least 10 yards or whatever your space allows.',
+    ],
+    formSteps: [
+      'Step forward with one leg into a long stride — knee tracks over mid-foot, not collapsing in.',
+      'Lower the back knee toward the floor with control. Stop just above the floor.',
+      'Push through the front foot to drive yourself UP and forward into the next step.',
+      'Bring the trailing leg forward into the next lunge. Same form, opposite leg.',
+      'Keep torso vertical — no leaning forward over the front knee.',
+    ],
+    commonMistakes: [
+      'Knee caving inward on the front leg.',
+      'Front knee shooting too far over the toes.',
+      'Trailing knee slamming into the floor.',
+      'Torso leaning forward.',
+      'Stride too short — turning it into a half-rep.',
+    ],
+    corrections: [
+      'Cue "knee tracks over mid-foot." Push the knee out toward the pinky toe.',
+      'Take a longer stride — your shin should stay roughly vertical at the bottom.',
+      'Lower the knee to within an inch of the floor — never bang it down.',
+      'Cue "tall chest, eyes forward." Brace the core to stay upright.',
+      'Long stride — front thigh roughly parallel to the floor at the bottom.',
+    ],
+    difficultyLevel: 'beginner',
+    // Renaissance Periodization — "Dumbbell Walking Lunge"
+    youtubeId: 'eFWCn5iEbTU',
+  },
+
+  {
+    name: 'Single-Leg Hip Thrust',
+    aliases: ['SL Hip Thrust', 'Single Leg Hip Thrust', 'One Leg Hip Thrust'],
+    primaryMuscles: ['Glutes'],
+    secondaryMuscles: ['Hamstrings', 'Core'],
+    feel:
+      'Working glute squeezing hard at the top of each rep — the pump is intense and isolated. Hamstrings assisting. Core holding everything stacked. The non-working side stays totally relaxed.',
+    avoidFeel:
+      "Lower back arching to push the hips up, opposite hip dropping, knee caving in. If the working glute can't drive the rep, drop to bodyweight only — this is a feel-and-form lift first.",
+    setupCues: [
+      'Upper back on a bench, working foot flat on the floor about a shin\'s length from your butt.',
+      'Non-working leg extended straight out, knee straight, foot pointed.',
+      'Hips and shoulders square — pelvis level, not tilted.',
+      'Chin tucked slightly. Bracing core. Optional load: dumbbell or plate over the working hip.',
+    ],
+    formSteps: [
+      'Drive through the working foot — heel pressing into the floor.',
+      'Squeeze the glute as the hips rise. Pelvis stays level — non-working hip does NOT drop.',
+      'Lock out at the top with hips fully extended. Pause 1 second, hard glute squeeze.',
+      'Lower with control. Don\'t bounce off the bottom.',
+      'Keep the non-working leg passive — it doesn\'t kick or push.',
+    ],
+    commonMistakes: [
+      'Pelvis tilting — non-working hip dropping below working hip.',
+      'Lower back arching to fake hip extension.',
+      'Pushing through the toes instead of the heel.',
+      'Going too fast / bouncing reps.',
+      'Adding load before the bodyweight rep is clean.',
+    ],
+    corrections: [
+      'Cue "level pelvis." Place a hand on the non-working hip to feel it stay up.',
+      'Cue "ribs down, glutes squeezed." Hip extension comes from the glute, not the lumbar spine.',
+      'Drive through the heel. The toes can lift slightly off the floor as a check.',
+      'Pause 1 second at the top of every rep. Strict tempo or no progress.',
+      'Master 3×12 bodyweight reps with level pelvis BEFORE adding load.',
+    ],
+    difficultyLevel: 'intermediate',
+    // Renaissance Periodization — "Single Leg Hip Thrust"
+    youtubeId: 'lzDgRRuBdqY',
+  },
+
+  {
+    name: 'Seal Row',
+    aliases: ['Seal Rows'],
+    primaryMuscles: ['Mid-back', 'Lats'],
+    secondaryMuscles: ['Rhomboids', 'Rear delts', 'Biceps'],
+    feel:
+      "Pure back contraction with zero help from the lower body. The bench takes hips and back out of the equation entirely — only your back can lift the bar. Mid-back fries fast.",
+    avoidFeel:
+      "Chest peeling off the bench, traps shrugging up, biceps overtaking the row. If you can't keep contact with the bench, the load is too heavy — there is no way to cheat a seal row.",
+    setupCues: [
+      'Lie face-down on a flat bench elevated on blocks (so the bar can hang free underneath).',
+      'Bar directly under your shoulders. Hands at shoulder-width or slightly outside.',
+      'Chest, hips, and quads pressed into the bench. Body fully supported.',
+      'Pre-engage lats — pull shoulders down and back before the first rep.',
+    ],
+    formSteps: [
+      'Row the bar straight up to the underside of the bench. Elbows lead.',
+      'Squeeze shoulder blades together at the top. Pause 1 second.',
+      'Lower with control to a dead hang — arms straight but shoulders still packed.',
+      'Keep the chest glued to the bench. No body english.',
+      'Reset and repeat. Strict, slow, hard squeezes.',
+    ],
+    commonMistakes: [
+      'Lifting the chest off the bench to add range.',
+      'Pulling with biceps instead of mid-back.',
+      'Bouncing the bar off the bottom.',
+      'Going too heavy — body english creeping in despite the bench.',
+      'Insufficient ROM — failing to pull the bar all the way up.',
+    ],
+    corrections: [
+      'Cue "stay glued to the bench." If you have to lift to pull, drop the weight.',
+      'Cue "elbows up to the bench." Drive elbows, biceps go along for the ride.',
+      'Pause 1 second at the bottom of every rep. Reset before pulling.',
+      'Lighten the load. Seal rows expose form errors fast — strict reps or no progress.',
+      'Pull until the bar touches the underside of the bench. That\'s the rep.',
+    ],
+    difficultyLevel: 'intermediate',
+    // Renaissance Periodization — "Seal Row"
+    youtubeId: '4H2ItXwUTp8',
+  },
+
+  {
+    name: 'Incline DB Curl',
+    aliases: ['Incline Dumbbell Curl', 'Incline Bicep Curl', 'Incline Curl'],
+    primaryMuscles: ['Biceps'],
+    secondaryMuscles: ['Forearms'],
+    feel:
+      'Deep biceps stretch at the bottom of every rep — that\'s the whole point of the incline. Strong contraction at the top. No shoulder swing, no momentum — strict tempo.',
+    avoidFeel:
+      "Elbows drifting forward (out of the stretch position), shoulders rolling forward, lower back arching off the bench. If the biceps don't get the brutal stretch, the bench is too upright.",
+    setupCues: [
+      'Bench at 45–60°. The arms must hang BEHIND your torso for the stretch.',
+      'Sit back, shoulders pinned to the bench. Don\'t let them roll forward.',
+      'Dumbbells at your sides, arms fully extended, palms forward (supinated).',
+      'Light weight — incline curls are a stretch-focus exercise, not an ego lift.',
+    ],
+    formSteps: [
+      'Curl the dumbbells up by contracting the biceps. Elbows STAY pinned to your sides.',
+      'Stop short of the elbows drifting forward — that ends the tension on the biceps.',
+      'Pause 1 second at the top. Hard squeeze.',
+      'Lower with control over 2–3 seconds. Full extension at the bottom.',
+      'Feel the deep biceps stretch at the bottom. That\'s the rep.',
+    ],
+    commonMistakes: [
+      'Elbows drifting forward at the top — converting it into a regular curl.',
+      'Shoulders rolling forward off the bench.',
+      'Going too heavy and using shoulder swing.',
+      'Cutting the bottom of the rep short — no stretch.',
+      'Lower back arching off the bench.',
+    ],
+    corrections: [
+      'Cue "elbows pinned to the sides." Stop the rep when the elbow wants to drift forward.',
+      'Pull shoulder blades back and DOWN. Press the back of the shoulders into the bench.',
+      'Lighten the load. 8–12 reps with strict form beats 6 reps with cheating every time.',
+      'Lower to FULL extension every rep. Stretch the biceps hard at the bottom.',
+      'Cue "low back to the bench." Brace core, ribs down.',
+    ],
+    difficultyLevel: 'beginner',
+    // ATHLEAN-X — "Stop Screwing Up Incline Dumbbell Curls (PROPER FORM!)"
+    youtubeId: 'DCe8f6vMe9A',
   },
 ];
 
