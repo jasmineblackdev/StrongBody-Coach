@@ -173,13 +173,21 @@ interface Props {
 }
 
 /**
- * Compact horizontal calendar — 7 tiles, scrollable on narrow screens.
+ * Weekly calendar — 7 tiles. Two layouts:
+ *
+ *   < sm (mobile)   horizontal scroll, snap-x, min-width tiles
+ *                   (320px width fits ~3 tiles, swipe to see the rest)
+ *   ≥ sm           7-column grid, tiles auto-fill the row
+ *
  * Tap a tile to select it; the parent renders the day detail elsewhere.
  */
 export default function WeekCalendar({ days, selectedDow, onSelect }: Props) {
   return useMemo(
     () => (
-      <div className="grid grid-cols-7 gap-2">
+      <div
+        className="-mx-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-3 pb-2 sm:mx-0 sm:grid sm:grid-cols-7 sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0"
+        role="tablist"
+      >
         {days.map((d) => {
           const tone = TONE_BY_KIND[d.kind];
           const selected = d.dow === selectedDow;
@@ -187,23 +195,25 @@ export default function WeekCalendar({ days, selectedDow, onSelect }: Props) {
             <button
               key={d.dow}
               onClick={() => onSelect(d.dow)}
-              className={`flex flex-col items-stretch rounded-xl border-2 p-2 text-left transition active:scale-95 ${
+              role="tab"
+              aria-selected={selected}
+              aria-label={`${d.longLabel} — ${d.typeLabel}${d.exerciseCount ? ` · ${d.exerciseCount} exercises` : ''}`}
+              className={`flex shrink-0 snap-start flex-col items-stretch rounded-xl border-2 p-2.5 text-left transition active:scale-95 sm:shrink ${
                 selected
                   ? `${tone.border} ${tone.bg} shadow-glow`
                   : `${tone.border} ${tone.bg} opacity-80 hover:opacity-100`
               }`}
-              aria-pressed={selected}
-              aria-label={`${d.longLabel} — ${d.typeLabel}${d.exerciseCount ? ` · ${d.exerciseCount} exercises` : ''}`}
+              style={{ minWidth: '5.5rem' }}
             >
               <div className="flex items-center justify-between">
                 <span
-                  className={`text-[10px] font-semibold uppercase tracking-wider ${tone.text}`}
+                  className={`text-[11px] font-semibold uppercase tracking-wider ${tone.text}`}
                 >
                   {d.label}
                 </span>
                 {d.isToday && (
                   <span
-                    className={`inline-flex h-1.5 w-1.5 rounded-full ${
+                    className={`inline-flex h-2 w-2 rounded-full ${
                       d.kind === 'rest' ? 'bg-zinc-400' : tone.text.replace('text-', 'bg-')
                     }`}
                     aria-hidden
@@ -215,11 +225,11 @@ export default function WeekCalendar({ days, selectedDow, onSelect }: Props) {
               >
                 {d.kind === 'rest' ? 'Rest' : d.kind}
               </span>
-              <span className="mt-1 line-clamp-2 text-[11px] font-semibold leading-tight text-zinc-100">
+              <span className="mt-1 line-clamp-2 text-xs font-semibold leading-tight text-zinc-100">
                 {d.kind === 'rest' ? 'Recovery' : d.typeLabel.split(' · ')[0]}
               </span>
               {d.exerciseCount > 0 && (
-                <span className="mt-1 text-[9px] text-zinc-500">
+                <span className="mt-1 text-[10px] text-zinc-500">
                   {d.exerciseCount} ex · {d.estimatedMinutes} m
                 </span>
               )}

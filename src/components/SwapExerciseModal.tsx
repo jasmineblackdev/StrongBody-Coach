@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { X, Search, Check, Replace, Eye } from 'lucide-react';
 import { Pill } from './ui';
-import { exerciseLibrary } from '../lib/exerciseLibrary';
+import { exerciseLibrary, findExercise } from '../lib/exerciseLibrary';
 import { explainPrescription } from '../lib/trainerPrescription';
 import { detectWeakPoints } from '../lib/weakPoints';
 import { store } from '../lib/storage';
@@ -59,11 +59,39 @@ export default function SwapExerciseModal({
     return rationale.alternates;
   }, [current, phase]);
 
-  // Library list — exclude the current exercise + filter by query
+  // Muscle-overlap filter so the swap list only shows exercises that
+  // train the same muscles as the one being swapped out. Without this
+  // filter, swapping Back Squat surfaced Bench Press / Pallof Press /
+  // Dead Bug — irrelevant for someone who needs a squat alternative.
+  //
+  // Strategy: take the current exercise's PRIMARY muscles (lowercased)
+  // and match candidates whose primary OR secondary muscles include
+  // any of those tokens. When the current exercise isn't in the
+  // library (e.g., a custom or already-swapped name), fall back to
+  // showing all exercises so the user isn't dead-ended.
+  const targetMuscles = useMemo(() => {
+    const entry = findExercise(current.name);
+    if (!entry) return null;
+    return new Set(entry.primaryMuscles.map((m) => m.toLowerCase()));
+  }, [current.name]);
+
+  // Library list — exclude the current exercise + filter by muscle
+  // overlap + filter by query
   const libraryRows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return exerciseLibrary
       .filter((e) => e.name !== current.name)
+      .filter((e) => {
+        // Muscle filter — skip when the current exercise isn't in the
+        // library (no muscles to compare against). Otherwise require at
+        // least one shared primary muscle.
+        if (!targetMuscles) return true;
+        const candidateMuscles = [
+          ...e.primaryMuscles,
+          ...e.secondaryMuscles,
+        ].map((m) => m.toLowerCase());
+        return candidateMuscles.some((m) => targetMuscles.has(m));
+      })
       .filter((e) => {
         if (!q) return true;
         if (e.name.toLowerCase().includes(q)) return true;
@@ -73,7 +101,7 @@ export default function SwapExerciseModal({
         return false;
       })
       .slice(0, 50);
-  }, [current.name, query]);
+  }, [current.name, query, targetMuscles]);
 
   return (
     <div
@@ -140,8 +168,17 @@ export default function SwapExerciseModal({
           {/* Search */}
           <section>
             <div className="mb-2 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-300">
-              <Eye size={12} /> Browse all exercises
+              <Eye size={12} /> Same muscle group
             </div>
+            {targetMuscles && (
+              <div className="mb-2 flex flex-wrap gap-1">
+                {Array.from(targetMuscles).map((m) => (
+                  <Pill key={m} tone="accent">
+                    {m}
+                  </Pill>
+                ))}
+              </div>
+            )}
             <label className="relative mb-3 block">
               <Search
                 size={14}
@@ -151,7 +188,7 @@ export default function SwapExerciseModal({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name or muscle (e.g. squat, glute, back)"
+                placeholder="Search within these muscles"
                 className="input pl-9"
                 autoFocus
               />
@@ -159,7 +196,9 @@ export default function SwapExerciseModal({
 
             {libraryRows.length === 0 ? (
               <p className="rounded-xl border border-ink-800 bg-ink-850 p-4 text-center text-xs text-zinc-500">
-                No matches for "{query}". Try a muscle name (e.g. "glute", "back") or a different lift.
+                {query
+                  ? `No matches for "${query}" within the same muscle group.`
+                  : "No matching alternatives in the library yet — try the trainer suggestions above."}
               </p>
             ) : (
               <ul className="space-y-1.5">
