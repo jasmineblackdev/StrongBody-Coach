@@ -723,6 +723,50 @@ const LIBRARY: ExerciseEntry[] = [
     ],
     difficultyLevel: 'beginner',
   },
+
+  // Advanced core progression — only for trunk that's already braced.
+  // The female engine + form risk routing point lower-back-flagged
+  // sessions toward Stability Ball Plank / Dead Bug instead.
+  {
+    name: 'Ab Roller',
+    aliases: ['Ab Wheel', 'Ab Wheel Rollout', 'Ab Roller Rollout'],
+    primaryMuscles: ['Rectus abdominis'],
+    secondaryMuscles: ['Obliques', 'Lats', 'Shoulders', 'Hip flexors'],
+    feel:
+      "Deep abdominal stretch through the eccentric, then a hard contraction in the rectus + obliques pulling you back. Lats engaged the entire time, holding tension on the wheel like you're pulling it back to your hips.",
+    avoidFeel:
+      "Lower-back arching, pinching, or compression. Hip flexors taking over instead of abs. Shoulders rolling forward into a collapsed position. If your low back feels ANY load — that's a hard stop, swap to Stability Ball Plank or Dead Bug.",
+    setupCues: [
+      'Knees on a soft surface (mat / folded towel). Wheel directly under shoulders.',
+      'Grip wheel handles tight. Squeeze the handles like you\'re trying to crush them — that turns lats on.',
+      'Brace 360° before you start: ribs down, posterior pelvic tilt (tuck your tailbone up toward ribs).',
+      'Knees stay PINNED to the floor — they don\'t lift, they don\'t shift. Hips stay over knees at the start.',
+    ],
+    formSteps: [
+      'Roll the wheel forward by extending arms + lats only. Hips stay over knees the entire descent.',
+      'Stop where you can still hold a flat back — usually 60–80% of full extension on first sets.',
+      'Pause 1 second at full extension. This is where most form failures happen — own the position.',
+      'Pull the wheel back by contracting abs + lats together. Cue: "elbows toward hips."',
+      'Finish at start position with abs still tight. No relax-rest between reps.',
+    ],
+    commonMistakes: [
+      'Lower back arching at full extension (banana shape).',
+      'Hips dropping forward / hip-flexor pull instead of ab pull.',
+      'Going to full extension before the body is ready.',
+      'Rolling the wheel out with arms only — no lat engagement.',
+      'Holding breath through reps.',
+    ],
+    corrections: [
+      'STOP the rep before the back arches. Cut range of motion until the brace holds. Build to full extension over 3–4 weeks. If pain persists, swap to Stability Ball Plank.',
+      'Cue "tailbone tucked toward ribs." Reset the brace before each rep. Keep posterior pelvic tilt active throughout.',
+      'Progression matters: start from elevated handles or roll only 50% of the range. Add 10% per week. Master the partial before the full.',
+      'Squeeze the handles HARD. Cue "pull the wheel apart" — that wakes up the lats. Lats keep the spine safe.',
+      'Inhale on the roll-out, exhale on the pull-back. Steady breathing = sustained brace.',
+    ],
+    difficultyLevel: 'advanced',
+    // ATHLEAN-X — "The Ultimate Ab Rollout Progression (BEGINNER TO ADVANCED!)"
+    youtubeId: '5I3LgiumTJM',
+  },
 ];
 
 // ─── Coaching helpers ────────────────────────────────────────────────────────
