@@ -118,6 +118,9 @@ const LIBRARY: ExerciseEntry[] = [
       'Cue "knees over pinky toes" the entire pause; keep tension actively pushing them out.',
     ],
     difficultyLevel: 'intermediate',
+    // Reuses Back Squat video — same form, just held at the bottom.
+    // Squat University — "How to Perform A Back Squat"
+    youtubeId: '7v_V6xiA_AA',
   },
 
   {
@@ -1310,6 +1313,136 @@ const LIBRARY: ExerciseEntry[] = [
     difficultyLevel: 'beginner',
     // ATHLEAN-X — "Stop Screwing Up Incline Dumbbell Curls (PROPER FORM!)"
     youtubeId: 'DCe8f6vMe9A',
+  },
+
+  {
+    name: 'Paused Bench',
+    aliases: ['Paused Bench Press', 'Pause Bench', 'Pause Bench Press', '2s Paused Bench'],
+    primaryMuscles: ['Chest'],
+    secondaryMuscles: ['Front delts', 'Triceps'],
+    feel:
+      'Massive chest stretch held at the bottom — no stretch reflex bounce to help you. Then a hard, dead-start press. The pause exposes any sloppy bracing or tightness in your bench setup.',
+    avoidFeel:
+      "Bar drifting up your chest during the pause, ribs flaring, shoulders rolling forward, lower back peeling off the bench. If you can't hold a tight bottom position, the load is too heavy.",
+    setupCues: [
+      'Same setup as Bench Press. Use ~80% of your normal bench working weight.',
+      'Foot drive, arch, scaps locked DOWN before unrack.',
+      'Big breath, brace, ribs down. The pause demands a bigger brace than touch-and-go.',
+    ],
+    formSteps: [
+      'Lower the bar with control to your lower chest / sternum.',
+      'Pause 2 full seconds. Bar dead on the chest. Stay tight — every muscle still working.',
+      'No bounce. Press up explosively from the dead-stop position.',
+      'Lock out fully, squeeze chest at the top.',
+      'Reset air and brace before each rep — never reuse air across reps.',
+    ],
+    commonMistakes: [
+      'Relaxing during the pause and bouncing the bar.',
+      'Bar sinking into the chest during the pause.',
+      'Going too heavy.',
+      'Losing the leg drive / arch during the pause.',
+      'Half-second pause instead of a full 2 seconds.',
+    ],
+    corrections: [
+      'Cue "stay rigid." Tension stays full through the pause — treat it like a static hold.',
+      'Pull shoulder blades down and back HARDER during the pause. Bar stays where it lands.',
+      'Drop 15–20% from your normal bench number. Paused bench is humbling.',
+      'Drive heels into the floor the entire pause. Glutes squeezed, arch held.',
+      'Count "one-thousand-one, one-thousand-two" out loud or in your head. No rushing.',
+    ],
+    difficultyLevel: 'intermediate',
+    // Reuses Bench Press video — same form, just paused at the chest.
+    // Jeff Nippard — "How To Get A Huge Bench Press with PERFECT Technique"
+    youtubeId: 'vcBig73ojpE',
+  },
+
+  {
+    name: 'Pause Deadlift Below Knee',
+    aliases: [
+      'Pause Deadlift',
+      'Paused Deadlift',
+      'Pause Deadlift (below knee)',
+      'Paused Deadlift Below Knee',
+      'Below-Knee Pause Deadlift',
+    ],
+    primaryMuscles: ['Hamstrings', 'Glutes'],
+    secondaryMuscles: ['Spinal erectors', 'Lats', 'Traps', 'Core'],
+    feel:
+      'Hamstrings, glutes, and back screaming during the pause just below the knee — the exact position where most deadlifts stall. Lats locked tight, bar pinned to the shins, brace iron-clad through the hold.',
+    avoidFeel:
+      "Lower back rounding during the pause, hips shooting up first, bar drifting away from the shins. The pause spotlight any form leak — if you can't hold the position, drop weight, don't muscle through.",
+    setupCues: [
+      'Same setup as Deadlift. Use ~70–80% of your normal deadlift working weight.',
+      'Brace harder than a normal deadlift — the pause demands more.',
+      'Lats engaged, bar tight to the shins before the pull starts.',
+    ],
+    formSteps: [
+      'Pull the bar off the floor with proper form: hips and shoulders rise together, bar dragging up the shins.',
+      'Pause 2 full seconds at just-below-knee position. Hold neutral spine, lats engaged, bar pinned to the shins.',
+      'Continue the pull to lockout — drive hips through, squeeze glutes at the top.',
+      'Lower with control along the same path. Reset air and brace before each rep.',
+      'No bouncing reps. Every rep starts from a dead stop on the floor.',
+    ],
+    commonMistakes: [
+      'Lower back rounding during the pause.',
+      'Hips shooting up first off the floor (turning into a stiff-leg).',
+      'Bar drifting away from the shins during the pause.',
+      'Cutting the pause short.',
+      'Bouncing reps off the floor.',
+    ],
+    corrections: [
+      'STOP the rep if the back rounds. Drop weight 15–20%. The pause exposes weak bracing — fix it before going heavy.',
+      'Push the floor away with the legs. Bar and shoulders rise together — chest up, hips back.',
+      'Cue "drag the bar up your shins." Lats engaged, bar tight against the legs the entire pull and pause.',
+      'Count out the full 2 seconds. No rushing.',
+      'Pause 1 second on the floor between reps. Reset air, reset brace, then pull.',
+    ],
+    difficultyLevel: 'advanced',
+    // Reuses Deadlift video — same form, with a hold at just-below-knee position.
+    // Squat University — "The ULTIMATE Deadlift Tutorial"
+    youtubeId: 'VL5Ab0T07e4',
+  },
+
+  {
+    name: 'Larsen Press',
+    aliases: ['Feet-Up Bench', 'Feet Up Bench Press', 'Feet-Elevated Bench'],
+    primaryMuscles: ['Chest'],
+    secondaryMuscles: ['Front delts', 'Triceps', 'Core'],
+    feel:
+      'Pure upper-body press — no leg drive to help. Chest, shoulders, and triceps doing all the work. Core fighting hard to keep you stable on the bench. Builds raw bench-press strength by removing the leg-drive crutch.',
+    avoidFeel:
+      "Lower back arching wildly to compensate for missing leg drive, body rocking on the bench, bar drifting forward toward the face. If your core can't keep you stable, the load is too heavy.",
+    setupCues: [
+      'Same setup as Bench Press, but feet up — either flat on the bench or on a low box at end of bench.',
+      'Slight arch only — no aggressive arch since you have no leg drive to support it.',
+      'Use ~75% of your normal bench working weight. Larsen press is naturally lighter.',
+      'Brace 360° HARD before unrack. Core is your only stabilizer now.',
+    ],
+    formSteps: [
+      'Big breath, brace, ribs DOWN. Scaps locked into the bench.',
+      'Lower the bar with control to your lower chest / sternum.',
+      'Touch and reverse — no bounce, no excess pause.',
+      'Press up by extending the elbows hard. Drive the bar in a slight arc back over the shoulders.',
+      'Lock out fully. Reset air and brace before the next rep.',
+    ],
+    commonMistakes: [
+      'Trying to use the same weight as regular bench (you can\'t — drop it).',
+      'Excessive arch without leg drive — back peels off the bench.',
+      'Body rocking / instability on the bench.',
+      'Bar drifting forward toward the face.',
+      'Holding breath through multiple reps.',
+    ],
+    corrections: [
+      'Drop 20–25% from your bench. The Larsen press exposes how much leg drive you were really using.',
+      'Smaller arch. Keep the lower back closer to the bench — without leg drive you can\'t support a big arch.',
+      'Brace HARDER. Cue "ribs down, ribs locked." Glutes squeezed even with feet up.',
+      'Cue "bar over mid-chest at the bottom, bar over shoulders at lockout." Same path, slight arc.',
+      'Reset air after each rep. The Larsen press is brace-intensive.',
+    ],
+    difficultyLevel: 'advanced',
+    // Reuses Bench Press video — Larsen is bench form with feet elevated, same upper-body mechanics.
+    // Jeff Nippard — "How To Get A Huge Bench Press with PERFECT Technique"
+    youtubeId: 'vcBig73ojpE',
   },
 ];
 
