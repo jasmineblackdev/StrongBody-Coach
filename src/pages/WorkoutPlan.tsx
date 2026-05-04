@@ -1,20 +1,19 @@
 import { useMemo, useState } from 'react';
-import { RefreshCw, ChevronRight, X, Sparkles, Info } from 'lucide-react';
-import { Card, CoachMessage, Pill, SectionHeader } from '../components/ui';
+import { Link } from 'react-router-dom';
+import { RefreshCw, X, Sparkles, Heart, Activity, Play } from 'lucide-react';
+import { Card, Pill } from '../components/ui';
 import ProposalReview from '../components/ProposalReview';
 import ExerciseDetailsModal from '../components/ExerciseDetailsModal';
 import { store } from '../lib/storage';
 import { useStoreVersion } from '../hooks/useStore';
 import { applyChanges, generateProposal } from '../lib/applyAdjustments';
-import { buildWeeklyPlan, dayLabel } from '../lib/workoutPlan';
+import { buildWeeklyPlan, defaultVolumeFor } from '../lib/workoutPlan';
 import { findExercise } from '../lib/exerciseLibrary';
-import { forecastAllLifts } from '../lib/ml/strengthForecaster';
 import { assessInjuryRisk, RISK_TONE } from '../lib/ml/injuryRisk';
-import { computeReadiness } from '../lib/recoveryEngine';
-import { defaultVolumeFor } from '../lib/workoutPlan';
+import { getAllHomeSessions } from '../lib/coreCardioPlan';
 import GymModeToggle from '../components/GymModeToggle';
-import HomeSessionsPanel from '../components/HomeSessionsPanel';
-import type { PlanProposal, TrainingPhase, WorkoutSession } from '../types';
+import WeekCalendar, { buildCalendarDays } from '../components/WeekCalendar';
+import type { PlanProposal, TrainingPhase } from '../types';
 
 const VOLUME_LABEL = {
   compact: { label: 'Compact volume', sub: '5–6 exercises/day' },
@@ -28,11 +27,6 @@ export default function WorkoutPlanPage() {
   useStoreVersion();
   const profile = store.getProfile()!;
   const logs = store.getLogs();
-  const readiness = useMemo(() => computeReadiness(logs), [logs]);
-  const liftForecasts = useMemo(
-    () => forecastAllLifts(logs, 5, { recoveryScore: readiness.score }),
-    [logs, readiness.score],
-  );
   const injuryRisk = useMemo(() => assessInjuryRisk(logs), [logs]);
   const [weekNumber, setWeekNumber] = useState(store.getWeekNumber());
   const [phase, setPhase] = useState<TrainingPhase>(store.getPlan()?.phase ?? 'hypertrophy');
@@ -46,8 +40,32 @@ export default function WorkoutPlanPage() {
     // planVersion bumps force re-read after accept
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, weekNumber, phase, planVersion]);
-  const [openId, setOpenId] = useState<string | null>(plan.sessions[0]?.id ?? null);
+  // Calendar selection — defaults to today's day-of-week so the user
+  // always lands on the relevant card. -1 sentinel until first compute.
+  const [selectedDow, setSelectedDow] = useState<number>(() => new Date().getDay());
   const [activeExercise, setActiveExercise] = useState<string | null>(null);
+
+  const homeSessions = useMemo(
+    () =>
+      getAllHomeSessions({
+        profile,
+        weekNumber,
+        recentLogs: logs,
+      }),
+    [profile, weekNumber, logs],
+  );
+
+  const calendarDays = useMemo(
+    () =>
+      buildCalendarDays({
+        liftSessions: plan.sessions,
+        homeSessions,
+      }),
+    [plan, homeSessions],
+  );
+
+  const selectedDay =
+    calendarDays.find((d) => d.dow === selectedDow) ?? calendarDays[0];
   const [proposal, setProposal] = useState<PlanProposal | null>(() => {
     const p = store.getProposal();
     if (!p) return null;
@@ -130,156 +148,228 @@ export default function WorkoutPlanPage() {
     setSummary({ accepted: acceptedChanges.length, rejected: rejectedChanges.length });
   }
 
+  const phaseChip = phase[0].toUpperCase() + phase.slice(1);
+
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="h1">Weekly plan</h1>
-          <p className="muted text-sm mt-1">
-            Powerlifting structure with bodybuilding-style accessories. 8–9 exercises per session, scaled to your 1RMs.
-          </p>
+    <div className="space-y-4">
+      {/* Slim header — title + week stepper + chips, no paragraphs. */}
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="h1">Schedule</h1>
+          <div className="flex items-center gap-1">
+            <button
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink-700 text-zinc-300 hover:bg-ink-800"
+              onClick={() => setWeekNumber(Math.max(1, weekNumber - 1))}
+              aria-label="Previous week"
+            >
+              −
+            </button>
+            <div className="min-w-[68px] text-center text-sm font-bold text-zinc-100">
+              Week {weekNumber}
+            </div>
+            <button
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink-700 text-zinc-300 hover:bg-ink-800"
+              onClick={() => setWeekNumber(weekNumber + 1)}
+              aria-label="Next week"
+            >
+              +
+            </button>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Pill tone="accent">Week {weekNumber}</Pill>
-          <Pill>Phase: {phase}</Pill>
-          {(() => {
-            const pref = defaultVolumeFor(profile);
-            const meta = VOLUME_LABEL[pref];
-            return (
-              <span
-                title="Core moves to cardio/rest days unless safety logic pulls it back in."
-                className="inline-flex flex-col items-start rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-rose-glow"
-              >
-                <span>{meta.label}</span>
-                <span className="text-[10px] font-normal text-zinc-300">{meta.sub}</span>
-              </span>
-            );
-          })()}
-          {injuryRisk.level !== 'low' && (
-            <Pill tone={RISK_TONE[injuryRisk.level]}>
-              risk: {injuryRisk.level}
-            </Pill>
-          )}
-          <button onClick={generateCoachPreview} className="btn-outline">
-            <Sparkles size={16} /> Generate coach preview
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={generateCoachPreview}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-ink-700 bg-ink-850 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-ink-800"
+          >
+            <Sparkles size={14} /> Preview
           </button>
-          <button onClick={persistAndContinue} className="btn-primary">
-            <RefreshCw size={16} /> Save plan
+          <button
+            onClick={persistAndContinue}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-bold text-white shadow-glow"
+          >
+            <RefreshCw size={14} /> Save
           </button>
           <GymModeToggle />
         </div>
       </header>
-      <p className="-mt-3 text-[11px] text-zinc-500">
-        Core moves to cardio/rest days unless safety logic pulls it back in.
-        Adjust volume preference on Profile.
-      </p>
 
-      {injuryRisk.level === 'high' && (
-        <CoachMessage tone="danger" title={`Injury risk: ${injuryRisk.level}`}>
-          {injuryRisk.recommendation}
-          {injuryRisk.flags.length > 0 && (
-            <ul className="mt-2 list-disc pl-5 text-xs opacity-90">
-              {injuryRisk.flags.slice(0, 3).map((f, i) => (
-                <li key={i}>{f}</li>
-              ))}
-            </ul>
-          )}
-        </CoachMessage>
-      )}
+      {/* Status chips — replace the long phase + injury paragraphs.
+          Each chip is one short claim; tap-to-expand panels are gone. */}
+      <div className="flex flex-wrap gap-2">
+        <Pill tone="accent">{phaseChip} block</Pill>
+        <Pill>{VOLUME_LABEL[defaultVolumeFor(profile)].label}</Pill>
+        {injuryRisk.level !== 'low' && (
+          <Pill tone={RISK_TONE[injuryRisk.level]}>
+            {injuryRisk.level === 'high' ? 'High Risk' : 'Watch RPE'}
+          </Pill>
+        )}
+        {phase === 'deload' && <Pill tone="warning">Recovery focus</Pill>}
+        {phase === 'peak' && <Pill tone="danger">Peak — heavy</Pill>}
+        <div className="flex flex-wrap gap-2">
+          {PHASES.map((ph) => (
+            <button
+              key={ph}
+              onClick={() => setPhase(ph)}
+              className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition ${
+                phase === ph
+                  ? 'border-accent/40 bg-accent/15 text-rose-glow'
+                  : 'border-ink-700 bg-ink-850 text-zinc-400 hover:bg-ink-800'
+              }`}
+            >
+              {ph}
+            </button>
+          ))}
+        </div>
+      </div>
 
+      {/* Inline messages — surfaced only when active */}
       {previewMessage && !proposal && (
-        <div className="rounded-2xl border border-ink-700 bg-ink-850 p-4">
+        <div className="rounded-xl border border-ink-700 bg-ink-850 p-3 text-sm text-zinc-200">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm text-zinc-200">
+            <span>
               <Sparkles size={14} className="mr-1.5 inline-block text-rose-glow" />
               {previewMessage}
-            </div>
+            </span>
             <button
               onClick={() => setPreviewMessage(null)}
-              className="inline-flex items-center gap-1 rounded-lg border border-ink-700 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-ink-800"
+              className="text-xs text-zinc-400 hover:text-zinc-100"
+              aria-label="Dismiss"
             >
-              <X size={12} /> Dismiss
+              <X size={12} />
             </button>
           </div>
         </div>
       )}
 
-      <Card>
-        <div className="flex flex-wrap items-center gap-3">
-          <div>
-            <span className="label">Week</span>
-            <div className="flex items-center gap-2">
-              <button className="btn-ghost" onClick={() => setWeekNumber(Math.max(1, weekNumber - 1))}>−</button>
-              <div className="w-10 text-center font-display text-lg">{weekNumber}</div>
-              <button className="btn-ghost" onClick={() => setWeekNumber(weekNumber + 1)}>+</button>
-            </div>
-          </div>
-          <div>
-            <span className="label">Phase</span>
-            <div className="flex flex-wrap gap-2">
-              {PHASES.map((ph) => (
-                <button
-                  key={ph}
-                  onClick={() => setPhase(ph)}
-                  className={`btn ${phase === ph ? 'btn-primary' : 'btn-outline'}`}
-                >
-                  {ph}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {proposal && (
-        <ProposalReview proposal={proposal} onComplete={handleProposalComplete} />
-      )}
+      {proposal && <ProposalReview proposal={proposal} onComplete={handleProposalComplete} />}
 
       {summary && (
-        <div className="rounded-2xl border border-success/30 bg-success/10 p-4">
+        <div className="rounded-xl border border-success/30 bg-success/10 p-3 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm text-zinc-100">
-              <span className="font-semibold text-white">Review complete.</span>{' '}
-              Accepted {summary.accepted} change{summary.accepted === 1 ? '' : 's'}, rejected{' '}
-              {summary.rejected} change{summary.rejected === 1 ? '' : 's'}.
-              {summary.accepted > 0
-                ? ` Your local plan is now Week ${store.getWeekNumber()}.`
-                : ' No changes applied — staying on the current plan.'}
-            </div>
-            <button
-              onClick={() => setSummary(null)}
-              className="inline-flex items-center gap-1 rounded-lg border border-ink-700 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-ink-800"
-            >
-              <X size={12} /> Dismiss
+            <span>
+              Accepted {summary.accepted}, rejected {summary.rejected}.
+            </span>
+            <button onClick={() => setSummary(null)} className="text-xs text-zinc-300">
+              <X size={12} />
             </button>
           </div>
         </div>
       )}
 
-      <CoachMessage>
-        {phase === 'deload'
-          ? 'Deload week. Loads at 60%, RPE 6 cap, volume cut by a third. Recovery is the prescription.'
-          : phase === 'peak'
-          ? 'Peak block. Singles and doubles on mains, accessories trimmed. Sleep, food, mental focus.'
-          : phase === 'strength'
-          ? 'Strength block. Loads heavy, reps low, accessories targeted at your weak points.'
-          : 'Hypertrophy block. Building shape and the work capacity that lets us peak hard later. Quality reps.'}
-      </CoachMessage>
+      {/* The calendar — primary navigation */}
+      <WeekCalendar days={calendarDays} selectedDow={selectedDow} onSelect={setSelectedDow} />
 
-      <HomeSessionsPanel />
+      {/* Selected day detail — single card, focused */}
+      {selectedDay && (
+        <Card className={selectedDay.isToday ? 'border-accent/30' : ''}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                {selectedDay.longLabel}
+                {selectedDay.isToday && (
+                  <span className="ml-1 text-rose-glow">· today</span>
+                )}
+              </div>
+              <div className="mt-0.5 font-display text-xl font-bold text-zinc-100">
+                {selectedDay.typeLabel}
+              </div>
+              {selectedDay.hasSession && (
+                <div className="mt-1 text-xs text-zinc-400">
+                  {selectedDay.exerciseCount} exercises · ~{selectedDay.estimatedMinutes} min
+                </div>
+              )}
+            </div>
+            {selectedDay.isToday && selectedDay.hasSession && (
+              <Link
+                to="/log"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-bold text-white shadow-glow active:scale-95"
+              >
+                <Play size={14} /> Start
+              </Link>
+            )}
+          </div>
 
-      <div className="space-y-3">
-        {plan.sessions.map((s) => (
-          <SessionRow
-            key={s.id}
-            session={s}
-            open={openId === s.id}
-            onToggle={() => setOpenId(openId === s.id ? null : s.id)}
-            onSelectExercise={setActiveExercise}
-            forecasts={liftForecasts}
-          />
-        ))}
-      </div>
+          {/* Lift session detail */}
+          {selectedDay.liftSession && (
+            <div className="mt-4 space-y-2">
+              {selectedDay.liftSession.prescriptions.map((p) => {
+                const hasDetails = !!findExercise(p.name);
+                return (
+                  <button
+                    key={p.name}
+                    onClick={() => setActiveExercise(p.name)}
+                    className="flex w-full flex-col gap-1 rounded-xl border border-ink-800 bg-ink-850 px-3 py-2.5 text-left transition hover:border-accent/40 md:flex-row md:items-center md:justify-between md:gap-3"
+                    title={hasDetails ? 'View form cues + alternatives' : 'Open details'}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-zinc-100">{p.name}</span>
+                        {(p.tags ?? []).slice(0, 1).map((t) => (
+                          <Pill key={t}>{t}</Pill>
+                        ))}
+                      </div>
+                      <div className="mt-0.5 text-xs text-zinc-400">
+                        {p.sets} × {p.reps} · rest {p.restSec}s
+                        {p.rpeTarget ? ` · RPE ${p.rpeTarget}` : ''}
+                      </div>
+                    </div>
+                    <div className="text-right text-sm font-semibold text-zinc-100 md:shrink-0">
+                      {p.loadLbs ? `${p.loadLbs} lb` : <span className="text-xs text-zinc-400">bodyweight</span>}
+                    </div>
+                  </button>
+                );
+              })}
+              {selectedDay.liftSession.coachNote && (
+                <div className="mt-3 rounded-xl border border-accent/20 bg-accent/5 p-3 text-xs italic text-zinc-200">
+                  "{selectedDay.liftSession.coachNote}"
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Home (core + cardio) session detail */}
+          {selectedDay.homeSession &&
+            (() => {
+              const home = selectedDay.homeSession;
+              return (
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-zinc-300">
+                      <Heart size={12} /> Cardio
+                    </div>
+                    <p className="mt-1 text-sm text-zinc-100">{home.cardioBlock}</p>
+                  </div>
+                  <div className="rounded-xl border border-ink-800 bg-ink-850 p-3">
+                    <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-zinc-300">
+                      <Activity size={12} /> Core ({home.coreMinutes} min)
+                    </div>
+                    <ul className="mt-1.5 space-y-1 text-sm text-zinc-200">
+                      {home.corePrescriptions.map((p, i) => (
+                        <li key={i}>
+                          • {p.name} · {p.sets} × {p.reps}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {home.safetyOverride && home.safetyNote && (
+                    <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 text-xs text-zinc-100">
+                      {home.safetyNote}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+          {/* Rest day */}
+          {!selectedDay.hasSession && (
+            <div className="mt-4 rounded-xl border border-ink-800 bg-ink-850 p-3 text-sm text-zinc-300">
+              Rest day. Walk, hydrate, hit protein. The Dashboard's Rest Day card
+              has the full play-by-play.
+            </div>
+          )}
+        </Card>
+      )}
+
 
       {activeExercise && (
         <ExerciseDetailsModal
@@ -297,101 +387,3 @@ export default function WorkoutPlanPage() {
   );
 }
 
-function SessionRow({
-  session,
-  open,
-  onToggle,
-  onSelectExercise,
-  forecasts,
-}: {
-  session: WorkoutSession;
-  open: boolean;
-  onToggle: () => void;
-  onSelectExercise: (name: string) => void;
-  forecasts: ReturnType<typeof forecastAllLifts>;
-}) {
-  // Map main-lift prescriptions to their forecast
-  function forecastFor(name: string): ReturnType<typeof forecastAllLifts>[keyof ReturnType<typeof forecastAllLifts>] | null {
-    if (/back\s*squat|^squat$/i.test(name)) return forecasts.squat;
-    if (/bench\s*press|^bench$/i.test(name)) return forecasts.bench;
-    if (/conventional\s*deadlift|^deadlift$/i.test(name)) return forecasts.deadlift;
-    return null;
-  }
-  return (
-    <div className="card overflow-hidden">
-      <button onClick={onToggle} className="flex w-full items-center justify-between text-left">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-display text-lg font-semibold">{dayLabel[session.day]}</span>
-            <Pill>{session.prescriptions.length} exercises</Pill>
-          </div>
-          <div className="muted mt-0.5 text-xs">{session.coachNote}</div>
-        </div>
-        <ChevronRight size={18} className={`transition ${open ? 'rotate-90' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="mt-4 space-y-2">
-          {session.prescriptions.map((p, i) => {
-            const hasDetails = Boolean(findExercise(p.name));
-            const forecast = forecastFor(p.name);
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onSelectExercise(p.name)}
-                className="flex w-full flex-col gap-2 rounded-xl border border-ink-800 bg-ink-850 px-3 py-2.5 text-left text-sm transition hover:border-accent/40 hover:bg-ink-800 md:grid md:grid-cols-12 md:items-center md:gap-3"
-                title={hasDetails ? 'View exercise details' : 'Open details'}
-              >
-                <div className="md:col-span-4">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-semibold text-zinc-100">{p.name}</span>
-                    {hasDetails && (
-                      <Info size={12} className="shrink-0 text-rose-glow opacity-80" />
-                    )}
-                    {forecast && (
-                      <span className="text-[10px] uppercase tracking-wide text-rose-glow">
-                        · predicted {forecast.nextSessionTarget} lb
-                      </span>
-                    )}
-                  </div>
-                  {p.tags?.length ? (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {p.tags.slice(0, 3).map((t) => (
-                        <span key={t} className="text-[10px] uppercase tracking-wide text-zinc-500">
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-
-                {/* Mobile: stats row in a tight 3-up grid; Desktop: each col separately */}
-                <div className="grid grid-cols-3 gap-2 text-xs text-zinc-300 md:contents md:text-sm">
-                  <div className="md:col-span-2">
-                    <span className="md:hidden text-[10px] uppercase tracking-wider text-zinc-500">Sets × Reps</span>
-                    <div>
-                      {p.sets} × {p.reps}
-                    </div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <span className="md:hidden text-[10px] uppercase tracking-wider text-zinc-500">Load</span>
-                    <div>{p.loadLbs ? `${p.loadLbs} lb` : '—'}</div>
-                  </div>
-                  <div className="md:col-span-1">
-                    <span className="md:hidden text-[10px] uppercase tracking-wider text-zinc-500">Rest</span>
-                    <div>{p.restSec}s</div>
-                  </div>
-                </div>
-
-                {p.notes && (
-                  <div className="text-xs text-zinc-400 md:col-span-3">{p.notes}</div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
