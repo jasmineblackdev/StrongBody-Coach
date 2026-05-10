@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/analyze-photos.ts": {
+      "maxDuration": 60
+    }
+  }
+}

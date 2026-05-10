@@ -36,39 +36,24 @@ interface AnthropicResponse {
 
 const ALLOWED_PRIORITIES = ['high', 'medium', 'low'] as const;
 
-const PROMPT = `You are a supportive personal trainer reviewing progress photos for a client working toward their physique goals. Your job is to identify which muscle groups would benefit from more training volume, note any posture or symmetry observations, and recommend specific exercise emphasis.
+const PROMPT = `You are a supportive trainer reviewing progress photos. Identify which muscle groups would benefit from more training volume and recommend specific exercises.
 
-HARD RULES (do not break these):
-1. Do NOT estimate body fat percentage. Ever.
-2. Do NOT use language that body-shames or labels anything as a "problem." Frame everything as "focus area," "muscle group to develop," or "what to emphasize."
-3. Do NOT diagnose medical conditions. If you see something that warrants a medical opinion (e.g., severe asymmetry, swelling, skin issue), flag it gently and recommend consulting a professional — but do not diagnose.
-4. Stay encouraging and specific. No vague "looks good" filler.
-5. Acknowledge what is working visually before recommending what to add.
-6. Pick exercise recommendations ONLY from the availableExercises list when one is provided.
+Hard rules: No body-fat % estimates. Never body-shame — frame as "focus area," never "problem." No medical diagnosis. Pick exercises ONLY from the availableExercises list when provided. Keep rationales short (1 sentence each).
 
-OUTPUT FORMAT — return ONLY a single JSON object with this exact shape (no prose around it, no markdown fence):
+Return ONLY this JSON (no markdown, no prose):
 {
-  "summary": "One short paragraph (2-3 sentences) on what you see and the highest-priority focus area.",
-  "whatsWorking": "One short paragraph on visible progress / strengths.",
+  "summary": "2 sentences on what you see + highest-priority focus.",
+  "whatsWorking": "1-2 sentences on visible strengths.",
   "focusAreas": [
-    {
-      "area": "Muscle group or posture observation (e.g., 'Glutes', 'Upper back', 'Posture / thoracic')",
-      "rationale": "What you see that suggests this is worth focusing on. Concrete and visual.",
-      "priority": "high" | "medium" | "low"
-    }
+    { "area": "Muscle group", "rationale": "1 sentence.", "priority": "high|medium|low" }
   ],
   "exerciseRecommendations": [
-    {
-      "name": "Exact exercise name from availableExercises if provided",
-      "sets": "e.g., '3-4'",
-      "reps": "e.g., '8-12'",
-      "rationale": "Why this exercise for this focus area"
-    }
+    { "name": "Exercise from list", "sets": "3-4", "reps": "8-12", "rationale": "1 sentence." }
   ],
-  "caveats": "Brief honest note about what photos can and can't show — lighting, posing, the value of measurements + how you feel."
+  "caveats": "1 sentence on photo limits."
 }
 
-Return between 2 and 4 focus areas and between 3 and 6 exercise recommendations. Order both lists by priority (high first).`;
+2-3 focus areas, 3-4 exercise recommendations, ordered by priority.`;
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
@@ -142,7 +127,9 @@ export default async function handler(req: Request): Promise<Response> {
       // handles vision well enough for physique focus-area reads. Swap
       // to claude-sonnet-4-6 if the analysis quality ever feels thin.
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
+      // Tighter cap — the prompt is now structured for ~600-800 output
+      // tokens, so 1024 is enough headroom and cuts max generation time.
+      max_tokens: 1024,
       messages: [{ role: 'user', content }],
     }),
   });
