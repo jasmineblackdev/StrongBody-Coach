@@ -1,19 +1,20 @@
-// Vercel serverless function — streams a vision request from Anthropic
-// back to the browser as Server-Sent Events.
+// Vercel Edge function — streams a vision request from Anthropic back
+// to the browser as Server-Sent Events.
 //
-// Why streaming: the prior non-streaming version hit Vercel's gateway
-// timeout (HTTP 504) when generation ran 20-30s, because nothing flowed
-// back to the edge during that window. Streaming starts emitting bytes
-// within ~1s, so the gateway stays happy regardless of total runtime.
+// Why Edge: Vercel Node serverless functions silently buffered the
+// ReadableStream response, so the gateway timed out (HTTP 504) even
+// though our function code was streaming correctly. Edge runtime
+// supports response streaming natively with no buffering, and Vercel
+// extends the wall-clock to 60s as long as bytes keep flowing.
 //
 // The client receives `progress` events while the model generates, then
 // one final `complete` event carrying the parsed analysis JSON. Errors
 // surface as `error` events.
 //
 // Configure: set ANTHROPIC_API_KEY in Vercel project env (Production +
-// Preview). The 60s maxDuration is also pinned in vercel.json.
+// Preview).
 
-export const config = { runtime: 'nodejs', maxDuration: 60 };
+export const config = { runtime: 'edge' };
 
 type Slot = 'front' | 'side' | 'back';
 
@@ -209,7 +210,8 @@ export default async function handler(req: Request): Promise<Response> {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
+      // Tells Vercel + any upstream proxies not to buffer the SSE body.
+      'X-Accel-Buffering': 'no',
     },
   });
 }
