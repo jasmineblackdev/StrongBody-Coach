@@ -1,13 +1,18 @@
-// Vercel serverless function — proxies a vision request to Anthropic's
-// Messages API. Keeps the ANTHROPIC_API_KEY off the client. Photos are
-// forwarded once, not stored.
+// Vercel serverless function — streams a vision request from Anthropic
+// back to the browser as Server-Sent Events.
+//
+// Why streaming: the prior non-streaming version hit Vercel's gateway
+// timeout (HTTP 504) when generation ran 20-30s, because nothing flowed
+// back to the edge during that window. Streaming starts emitting bytes
+// within ~1s, so the gateway stays happy regardless of total runtime.
+//
+// The client receives `progress` events while the model generates, then
+// one final `complete` event carrying the parsed analysis JSON. Errors
+// surface as `error` events.
 //
 // Configure: set ANTHROPIC_API_KEY in Vercel project env (Production +
-// Preview). No other env is required.
+// Preview). The 60s maxDuration is also pinned in vercel.json.
 
-// maxDuration raises the function timeout from the 10s Hobby default to
-// 60s — Sonnet/Haiku vision + JSON generation can run 15–25s on cold
-// requests, so the lower limit was timing out before the response landed.
 export const config = { runtime: 'nodejs', maxDuration: 60 };
 
 type Slot = 'front' | 'side' | 'back';
@@ -24,14 +29,8 @@ interface AnalyzeRequest {
     trainingDaysPerWeek?: number;
     problemAreas?: string[];
     weeksTraining?: number;
-    /** Names from the local exercise library so the model picks real entries. */
     availableExercises?: string[];
   };
-}
-
-interface AnthropicResponse {
-  content: Array<{ type: string; text?: string }>;
-  model: string;
 }
 
 const ALLOWED_PRIORITIES = ['high', 'medium', 'low'] as const;
@@ -65,12 +64,9 @@ export default async function handler(req: Request): Promise<Response> {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return new Response(
-      JSON.stringify({
-        error:
-          'ANTHROPIC_API_KEY is not configured on the server. Set it in Vercel project environment variables.',
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    return sseError(
+      'ANTHROPIC_API_KEY is not configured on the server. Set it in Vercel project environment variables.',
+      500,
     );
   }
 
@@ -78,20 +74,13 @@ export default async function handler(req: Request): Promise<Response> {
   try {
     body = (await req.json()) as AnalyzeRequest;
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return sseError('Invalid JSON body', 400);
   }
-
   if (!body.photos?.length) {
-    return new Response(JSON.stringify({ error: 'No photos provided' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return sseError('No photos provided', 400);
   }
 
-  // Convert each data URL into an Anthropic image content block + label.
+  // Build Anthropic content blocks from data URLs.
   const content: Array<Record<string, unknown>> = [];
   for (const photo of body.photos) {
     const match = photo.dataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
@@ -102,19 +91,15 @@ export default async function handler(req: Request): Promise<Response> {
     });
     content.push({ type: 'text', text: `[${photo.slot} view]` });
   }
-
   if (content.length === 0) {
-    return new Response(JSON.stringify({ error: 'No valid image data found' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return sseError('No valid image data found', 400);
   }
-
   content.push({
     type: 'text',
     text: `<user_context>\n${JSON.stringify(body.context ?? {}, null, 2)}\n</user_context>\n\n${PROMPT}`,
   });
 
+  // Open a streaming Anthropic request.
   const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -123,53 +108,117 @@ export default async function handler(req: Request): Promise<Response> {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      // Haiku 4.5 is ~3× faster than Sonnet for this prompt shape and
-      // handles vision well enough for physique focus-area reads. Swap
-      // to claude-sonnet-4-6 if the analysis quality ever feels thin.
       model: 'claude-haiku-4-5-20251001',
-      // Tighter cap — the prompt is now structured for ~600-800 output
-      // tokens, so 1024 is enough headroom and cuts max generation time.
       max_tokens: 1024,
+      stream: true,
       messages: [{ role: 'user', content }],
     }),
   });
 
-  if (!anthropicRes.ok) {
-    const detail = await anthropicRes.text();
-    return new Response(
-      JSON.stringify({ error: 'Vision API request failed', detail }),
-      { status: 502, headers: { 'Content-Type': 'application/json' } },
-    );
+  if (!anthropicRes.ok || !anthropicRes.body) {
+    const detail = await anthropicRes.text().catch(() => '');
+    return sseError(`Vision API request failed: ${detail || anthropicRes.status}`, 502);
   }
 
-  const data = (await anthropicRes.json()) as AnthropicResponse;
-  const textOut = data.content?.find((c) => c.type === 'text')?.text ?? '';
+  // Forward incremental progress to the client as SSE; parse the final
+  // accumulated text into structured analysis at the end.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      };
 
-  // The prompt asks for raw JSON, but defensively peel out a code fence if
-  // the model wraps it.
-  const fence = textOut.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  const candidate = fence ? fence[1] : textOut.trim();
+      // Initial heartbeat so the client + gateway both see bytes immediately.
+      send({ type: 'start' });
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(candidate);
-  } catch {
-    return new Response(
-      JSON.stringify({
-        error: 'Could not parse analysis JSON',
-        raw: textOut.slice(0, 500),
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
+      let accumulated = '';
+      let model = 'unknown';
+      const reader = anthropicRes.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-  // Light validation so the client gets something well-typed.
-  const safeAnalysis = sanitizeAnalysis(parsed);
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          // SSE frames split on blank lines.
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const payload = line.slice(6).trim();
+            if (!payload || payload === '[DONE]') continue;
+            try {
+              const evt = JSON.parse(payload) as {
+                type?: string;
+                delta?: { type?: string; text?: string };
+                message?: { model?: string };
+              };
+              if (evt.type === 'message_start' && evt.message?.model) {
+                model = evt.message.model;
+              }
+              if (
+                evt.type === 'content_block_delta' &&
+                evt.delta?.type === 'text_delta' &&
+                typeof evt.delta.text === 'string'
+              ) {
+                accumulated += evt.delta.text;
+                send({ type: 'progress', tokens: accumulated.length });
+              }
+            } catch {
+              /* skip malformed chunks */
+            }
+          }
+        }
 
-  return new Response(
-    JSON.stringify({ analysis: safeAnalysis, model: data.model }),
-    { headers: { 'Content-Type': 'application/json' } },
-  );
+        // Parse the accumulated text as JSON (peel a fenced block if any).
+        const fence = accumulated.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        const candidate = fence ? fence[1] : accumulated.trim();
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(candidate);
+        } catch {
+          send({
+            type: 'error',
+            message: 'Model output was not valid JSON',
+            raw: accumulated.slice(0, 500),
+          });
+          controller.close();
+          return;
+        }
+
+        send({
+          type: 'complete',
+          analysis: sanitizeAnalysis(parsed),
+          model,
+        });
+        controller.close();
+      } catch (err) {
+        send({
+          type: 'error',
+          message: err instanceof Error ? err.message : 'Stream error',
+        });
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
+function sseError(message: string, status: number): Response {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 function sanitizeAnalysis(input: unknown): Record<string, unknown> {

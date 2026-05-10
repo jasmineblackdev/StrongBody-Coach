@@ -39,6 +39,8 @@ interface AnalyzeArgs {
   weeksTraining?: number;
   /** Exercise library names — keeps recommendations grounded in real entries. */
   availableExercises?: string[];
+  /** Called with the number of bytes generated so far — for "still working" UX. */
+  onProgress?: (bytes: number) => void;
 }
 
 export async function analyzePhotoSet({
@@ -46,6 +48,7 @@ export async function analyzePhotoSet({
   profile,
   weeksTraining,
   availableExercises,
+  onProgress,
 }: AnalyzeArgs): Promise<PhotoAnalysis> {
   const slots: PhotoSlot[] = ['front', 'side', 'back'];
   const rawPhotos = slots
@@ -86,32 +89,65 @@ export async function analyzePhotoSet({
     body: JSON.stringify({ photos, context }),
   });
 
-  if (!res.ok) {
+  // Non-streaming error responses (auth, validation, etc.) come back as
+  // application/json with a 4xx/5xx status. Streaming successes arrive
+  // as 200 text/event-stream.
+  if (!res.ok || !res.body) {
     const errBody = (await res.json().catch(() => ({}))) as {
       error?: string;
-      detail?: string;
     };
-    throw new Error(
-      errBody.error ?? `Analyze failed (HTTP ${res.status})`,
-    );
+    throw new Error(errBody.error ?? `Analyze failed (HTTP ${res.status})`);
   }
 
-  const data = (await res.json()) as { analysis: unknown; model: string };
-  const a = (data.analysis ?? {}) as Record<string, unknown>;
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let analysis: PhotoAnalysis | null = null;
+  let streamError: string | null = null;
 
-  return {
-    analyzedAt: new Date().toISOString(),
-    model: data.model ?? 'unknown',
-    summary: String(a.summary ?? ''),
-    whatsWorking: String(a.whatsWorking ?? ''),
-    focusAreas: Array.isArray(a.focusAreas)
-      ? (a.focusAreas as PhotoFocusArea[])
-      : [],
-    exerciseRecommendations: Array.isArray(a.exerciseRecommendations)
-      ? (a.exerciseRecommendations as PhotoExerciseRecommendation[])
-      : [],
-    caveats: String(a.caveats ?? ''),
-  };
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const frames = buffer.split('\n\n');
+    buffer = frames.pop() ?? '';
+    for (const frame of frames) {
+      const line = frame.trim();
+      if (!line.startsWith('data: ')) continue;
+      const payload = line.slice(6);
+      let evt: Record<string, unknown>;
+      try {
+        evt = JSON.parse(payload);
+      } catch {
+        continue;
+      }
+      if (evt.type === 'progress' && typeof evt.tokens === 'number') {
+        onProgress?.(evt.tokens);
+      } else if (evt.type === 'complete') {
+        const a = (evt.analysis ?? {}) as Record<string, unknown>;
+        analysis = {
+          analyzedAt: new Date().toISOString(),
+          model: typeof evt.model === 'string' ? evt.model : 'unknown',
+          summary: String(a.summary ?? ''),
+          whatsWorking: String(a.whatsWorking ?? ''),
+          focusAreas: Array.isArray(a.focusAreas)
+            ? (a.focusAreas as PhotoFocusArea[])
+            : [],
+          exerciseRecommendations: Array.isArray(a.exerciseRecommendations)
+            ? (a.exerciseRecommendations as PhotoExerciseRecommendation[])
+            : [],
+          caveats: String(a.caveats ?? ''),
+        };
+      } else if (evt.type === 'error') {
+        streamError =
+          typeof evt.message === 'string' ? evt.message : 'Stream error';
+      }
+    }
+  }
+
+  if (streamError) throw new Error(streamError);
+  if (!analysis) throw new Error('Stream ended without a result');
+  return analysis;
 }
 
 // Resize a stored JPEG dataURL down to `maxEdge` on its longest side, at

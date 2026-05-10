@@ -63,6 +63,7 @@ export default function ProgressPhotoPanel() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
 
   // Keep the active date pointing at a real set when sets change underneath us.
   useEffect(() => {
@@ -137,6 +138,7 @@ export default function ProgressPhotoPanel() {
   async function handleAnalyze() {
     if (!activeSet) return;
     setAnalyzeError(null);
+    setAnalyzeProgress(0);
     setAnalyzing(true);
     try {
       const profile = store.getProfile();
@@ -146,6 +148,7 @@ export default function ProgressPhotoPanel() {
         set: activeSet,
         profile,
         availableExercises,
+        onProgress: (bytes) => setAnalyzeProgress(bytes),
       });
       setPhotoAnalysis(activeDate, result);
     } catch (err) {
@@ -363,7 +366,9 @@ export default function ProgressPhotoPanel() {
               {analyzing ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  Analyzing…
+                  {analyzeProgress > 0
+                    ? `Writing… ${analyzeProgress}`
+                    : 'Analyzing…'}
                 </>
               ) : (
                 <>
