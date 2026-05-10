@@ -2,7 +2,11 @@
 // JPEG at ~0.7 quality before storing, then base64 in localStorage. Cap on
 // retained sets keeps total payload well under the 5 MB localStorage budget.
 //
-// No remote upload. No Supabase column. Photos never leave the device.
+// Photos are not uploaded for storage. The optional Analyze feature
+// forwards photos to a server-side proxy (api/analyze-photos.ts) ONE TIME
+// per click; results come back as text and are persisted on the set.
+
+import type { PhotoAnalysis } from './photoAnalysis';
 
 const KEY = 'sbc:progressPhotoSets';
 const MAX_SETS = 8;
@@ -22,6 +26,8 @@ export interface PhotoSet {
   side?: string;
   back?: string;
   notes?: string;
+  /** Cached AI analysis output, set when the user runs Analyze. */
+  analysis?: PhotoAnalysis;
 }
 
 // Cache the parsed array so repeated callers get the SAME reference until
@@ -152,6 +158,24 @@ export function setPhotoNotes(date: string, notes: string): void {
   const idx = all.findIndex((s) => s.date === date);
   if (idx < 0) return;
   all[idx] = { ...all[idx], notes };
+  write(all);
+}
+
+export function setPhotoAnalysis(date: string, analysis: PhotoAnalysis): void {
+  const all = read();
+  const idx = all.findIndex((s) => s.date === date);
+  if (idx < 0) return;
+  all[idx] = { ...all[idx], analysis };
+  write(all);
+}
+
+export function clearPhotoAnalysis(date: string): void {
+  const all = read();
+  const idx = all.findIndex((s) => s.date === date);
+  if (idx < 0) return;
+  const next = { ...all[idx] };
+  delete next.analysis;
+  all[idx] = next;
   write(all);
 }
 
