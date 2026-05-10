@@ -48,13 +48,24 @@ export async function analyzePhotoSet({
   availableExercises,
 }: AnalyzeArgs): Promise<PhotoAnalysis> {
   const slots: PhotoSlot[] = ['front', 'side', 'back'];
-  const photos = slots
+  const rawPhotos = slots
     .map((slot) => ({ slot, dataUrl: set[slot] }))
     .filter((p): p is { slot: PhotoSlot; dataUrl: string } => Boolean(p.dataUrl));
 
-  if (photos.length === 0) {
+  if (rawPhotos.length === 0) {
     throw new Error('No photos to analyze — upload at least one angle first.');
   }
+
+  // The stored photos are 800px JPEG for the in-app viewer. The model
+  // doesn't need that resolution for a focus-area read — downscale to
+  // 512px so the request payload (and Anthropic's image tokenization)
+  // shrinks meaningfully, cutting end-to-end latency.
+  const photos = await Promise.all(
+    rawPhotos.map(async (p) => ({
+      slot: p.slot,
+      dataUrl: await downscaleForApi(p.dataUrl, 512),
+    })),
+  );
 
   const context = {
     sex: profile?.sex,
@@ -101,4 +112,36 @@ export async function analyzePhotoSet({
       : [],
     caveats: String(a.caveats ?? ''),
   };
+}
+
+// Resize a stored JPEG dataURL down to `maxEdge` on its longest side, at
+// 0.6 JPEG quality. Used right before /api/analyze-photos so the request
+// body (and the model's image tokens) are as small as possible.
+async function downscaleForApi(dataUrl: string, maxEdge: number): Promise<string> {
+  try {
+    const img = await loadImage(dataUrl);
+    const longest = Math.max(img.width, img.height);
+    if (longest <= maxEdge) return dataUrl;
+    const ratio = maxEdge / longest;
+    const w = Math.round(img.width * ratio);
+    const h = Math.round(img.height * ratio);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return dataUrl;
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', 0.6);
+  } catch {
+    return dataUrl;
+  }
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 }

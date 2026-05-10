@@ -5,7 +5,10 @@
 // Configure: set ANTHROPIC_API_KEY in Vercel project env (Production +
 // Preview). No other env is required.
 
-export const config = { runtime: 'nodejs' };
+// maxDuration raises the function timeout from the 10s Hobby default to
+// 60s — Sonnet/Haiku vision + JSON generation can run 15–25s on cold
+// requests, so the lower limit was timing out before the response landed.
+export const config = { runtime: 'nodejs', maxDuration: 60 };
 
 type Slot = 'front' | 'side' | 'back';
 
@@ -135,8 +138,11 @@ export default async function handler(req: Request): Promise<Response> {
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
+      // Haiku 4.5 is ~3× faster than Sonnet for this prompt shape and
+      // handles vision well enough for physique focus-area reads. Swap
+      // to claude-sonnet-4-6 if the analysis quality ever feels thin.
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1500,
       messages: [{ role: 'user', content }],
     }),
   });
